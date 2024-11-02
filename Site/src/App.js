@@ -16,18 +16,14 @@ function App() {
   return (
     <Router>
       <div style={{ textAlign: "center", padding: "20px" }}>
-        <h1>Chess </h1>
-        <nav>
-          <Link to="/login">Login</Link> | <Link to="/register">Register</Link>
-        </nav>
-        <h1>Chess Application</h1>
+        <h1>Chess 2.0</h1>
         {!isAuthenticated ? (
           <nav>
             <Link to="/login">Login</Link> |{" "}
             <Link to="/register">Register</Link>
           </nav>
         ) : (
-          <p>Welcome to the chess game!</p>
+          <p>Welcome to Chess!</p>
         )}
         <Routes>
           <Route
