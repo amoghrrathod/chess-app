@@ -7,7 +7,7 @@ function App() {
   return (
     <Router>
       <div style={{ textAlign: "center", padding: "20px" }}>
-        <h1>Chess Nigga</h1>
+        <h1>Chess </h1>
         <nav>
           <Link to="/login">Login</Link> | <Link to="/register">Register</Link>
         </nav>
