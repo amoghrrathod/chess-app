@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const Login = ({ onLogin }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Email:', email, 'Password:', password);
-    // Handle login logic here
+    console.log("Email:", email, "Password:", password);
+    onLogin(); // Call the onLogin prop to update the app state
+    navigate("/chess"); // Redirect to the chess game after login
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: 'auto' }}>
+    <div style={{ maxWidth: "400px", margin: "auto" }}>
       <h2>Login</h2>
       <form onSubmit={handleSubmit}>
         <div>
