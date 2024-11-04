@@ -1,0 +1,45 @@
+/* src/styles.css */
+body {
+  font-family: "Arial", sans-serif;
+}
+
+.chess-game-container {
+  text-align: center;
+}
+
+.chat-container {
+  margin-top: 20px;
+}
+
+.messages {
+  border: 1px solid #ccc;
+  padding: 10px;
+  height: 150px;
+  overflow-y: auto;
+}
+
+input[type="text"] {
+  width: calc(100% - 100px);
+}
+
+button {
+  padding: 10px;
+}
+
+/* Additional styles for better aesthetics */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+button,
+input[type="text"] {
+  margin-bottom: 10px;
+}
+
+button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+  cursor: pointer; /* Change cursor on hover */
+}

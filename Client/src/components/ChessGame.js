@@ -1,7 +1,7 @@
-// src/components/ChessGame.js
 import React, { useState, useEffect } from "react";
 import Chessboard from "chessboardjsx";
 import { Chess } from "chess.js";
+import Chat from "./Chat";
 
 const ChessGame = ({ user, socket }) => {
   const [game] = useState(new Chess());
@@ -9,9 +9,16 @@ const ChessGame = ({ user, socket }) => {
   const [turn, setTurn] = useState("w");
   const [error, setError] = useState("");
   const [opponent, setOpponent] = useState(null);
+  const [color, setColor] = useState(null); // Store player's color
+  const [messages, setMessages] = useState([]);
 
-  // Listen for opponent moves
   useEffect(() => {
+    socket.emit("joinGame", user.username);
+
+    socket.on("colorAssigned", (assignedColor) => {
+      setColor(assignedColor);
+    });
+
     socket.on("move", (move) => {
       game.move(move);
       setFen(game.fen());
@@ -22,15 +29,19 @@ const ChessGame = ({ user, socket }) => {
       setOpponent(opponentName);
     });
 
+    socket.on("chatMessage", (msg) => {
+      setMessages((prevMessages) => [...prevMessages, msg]);
+    });
+
     return () => {
       socket.off("move");
       socket.off("opponentJoined");
+      socket.off("chatMessage");
+      socket.off("colorAssigned");
     };
   }, [socket, game]);
 
   const onDrop = ({ sourceSquare, targetSquare }) => {
-    setError("");
-
     if (turn !== game.turn()) {
       setError("It's not your turn!");
       return;
@@ -55,12 +66,22 @@ const ChessGame = ({ user, socket }) => {
   };
 
   return (
-    <div style={{ textAlign: "center", padding: "20px" }}>
+    <div className="chess-game-container">
       <h1>Two-Player Chess</h1>
       <p>Current turn: {turn === "w" ? "White" : "Black"}</p>
       {error && <p style={{ color: "red" }}>{error}</p>}
-      <p>Player 1: {user?.username || "You"} (White)</p>
-      <p>Player 2: {opponent || "Waiting for opponent..."} (Black)</p>
+
+      {/* Display player colors */}
+      <p>{color === "white" ? "You are White" : "You are Black"}</p>
+      <p>
+        Player 1: {user?.username || "You"} (
+        {color === "white" ? "White" : "Black"})
+      </p>
+      <p>
+        Player 2: {opponent || "Waiting for opponent..."} (
+        {color === "black" ? "Black" : "White"})
+      </p>
+
       <Chessboard
         position={fen}
         onDrop={onDrop}
@@ -68,6 +89,9 @@ const ChessGame = ({ user, socket }) => {
         draggable={true}
         dropOffBoard="snapback"
       />
+
+      {/* Chat Component */}
+      <Chat messages={messages} socket={socket} />
     </div>
   );
 };
