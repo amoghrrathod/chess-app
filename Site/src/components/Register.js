@@ -1,19 +1,51 @@
-import React, { useState } from 'react';
+// src/components/Register.js
+
+import React, { useState } from "react";
 
 const Register = () => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Username:', username, 'Email:', email, 'Password:', password);
-    // Handle registration logic here (e.g., API call)
+
+    if (!username || !password) {
+      setError("Please enter both username and password.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Registration failed");
+      }
+
+      const data = await response.json();
+      setSuccess(data.message);
+      setUsername(""); // Clear input
+      setPassword(""); // Clear input
+      setError("");
+    } catch (error) {
+      setError(error.message);
+      setSuccess("");
+    }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: 'auto' }}>
+    <div style={{ maxWidth: "400px", margin: "auto" }}>
       <h2>Register</h2>
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {success && <p style={{ color: "green" }}>{success}</p>}
       <form onSubmit={handleSubmit}>
         <div>
           <label>Username:</label>
@@ -21,15 +53,6 @@ const Register = () => {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
