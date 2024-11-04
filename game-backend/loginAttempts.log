@@ -1,0 +1,18 @@
+{"level":"info","message":"Login successful for user: testuser","timestamp":"2024-11-04T07:03:47.508Z"}
+{"level":"warn","message":"Failed login attempt for user: testuse","timestamp":"2024-11-04T07:04:02.605Z"}
+{"level":"warn","message":"Failed login attempt for user: testuse","timestamp":"2024-11-04T07:04:20.720Z"}
+{"level":"warn","message":"Failed login attempt for user: testuse","timestamp":"2024-11-04T07:07:17.287Z"}
+{"level":"warn","message":"Failed login attempt for user: bru","timestamp":"2024-11-04T07:07:25.732Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T07:12:53.722Z"}
+{"level":"info","message":"Login successful for user: testuser","timestamp":"2024-11-04T07:14:37.672Z"}
+{"level":"warn","message":"Failed login attempt for user: testuser","timestamp":"2024-11-04T07:16:35.478Z"}
+{"level":"warn","message":"Failed login attempt for user: ","timestamp":"2024-11-04T07:30:09.506Z"}
+{"level":"info","message":"Login successful for user: testuser","timestamp":"2024-11-04T08:37:43.554Z"}
+{"level":"warn","message":"Failed login attempt for user: testuser","timestamp":"2024-11-04T08:37:49.520Z"}
+{"level":"info","message":"Login successful for user: testuser","timestamp":"2024-11-04T08:38:36.130Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T08:38:47.690Z"}
+{"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-04T08:39:30.404Z"}
+{"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-04T08:40:19.277Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T08:40:23.264Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T08:47:25.208Z"}
+{"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-04T08:47:33.575Z"}
