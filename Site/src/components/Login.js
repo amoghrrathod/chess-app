@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // src/components/Login.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -6,10 +7,19 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+=======
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+const Login = ({ onLogin }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+>>>>>>> 5ec6c8c433e90bc463a491b0da6bce97ee450e3d
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+<<<<<<< HEAD
     // Basic validation
     if (!username || !password) {
       setError("Please enter both username and password.");
@@ -41,6 +51,11 @@ const Login = () => {
       console.error("Error:", error);
       setError("An error occurred. Please try again.");
     }
+=======
+    console.log("Email:", email, "Password:", password);
+    onLogin(); // Call the onLogin prop to update the app state
+    navigate("/chess"); // Redirect to the chess game after login
+>>>>>>> 5ec6c8c433e90bc463a491b0da6bce97ee450e3d
   };
 
   return (
