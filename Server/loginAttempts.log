@@ -24,3 +24,6 @@
 {"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-04T10:47:12.661Z"}
 {"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T10:49:48.468Z"}
 {"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T10:52:57.075Z"}
+{"level":"info","message":"Login successful for user: pass","timestamp":"2024-11-04T14:52:35.726Z"}
+{"level":"info","message":"Login successful for user: pass","timestamp":"2024-11-04T14:55:34.040Z"}
+{"level":"info","message":"Login successful for user: pass","timestamp":"2024-11-04T14:56:28.568Z"}
