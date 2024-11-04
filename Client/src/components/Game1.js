@@ -32,7 +32,7 @@ const ChessGame = () => {
         setTurn(turn === "w" ? "b" : "w");
       } else {
         // If move is invalid, show an error (won't change board state)
-        setError("Invalid move from ${sourceSquare} to ${targetSquare}.");
+        setError(`Invalid move from ${sourceSquare} to ${targetSquare}.`);
       }
     } catch (error) {
       // Catch any error thrown by invalid moves and set error message
