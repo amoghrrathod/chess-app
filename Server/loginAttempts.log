@@ -24,6 +24,36 @@
 {"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-04T10:47:12.661Z"}
 {"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T10:49:48.468Z"}
 {"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T10:52:57.075Z"}
-{"level":"info","message":"Login successful for user: pass","timestamp":"2024-11-04T14:52:35.726Z"}
-{"level":"info","message":"Login successful for user: pass","timestamp":"2024-11-04T14:55:34.040Z"}
-{"level":"info","message":"Login successful for user: pass","timestamp":"2024-11-04T14:56:28.568Z"}
+{"level":"warn","message":"Failed login attempt for user: dsd","timestamp":"2024-11-04T17:03:33.046Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:04:48.846Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:12:07.542Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:17:26.452Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:40:31.987Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:40:57.242Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:41:34.159Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-04T17:41:40.327Z"}
+{"level":"warn","message":"Failed login attempt for user: dsd","timestamp":"2024-11-04T17:41:45.037Z"}
+{"level":"info","message":"Login successful for user: wiz","timestamp":"2024-11-05T03:16:27.357Z"}
+{"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-05T03:16:55.283Z"}
+{"level":"warn","message":"Failed login attempt for user: wiz","timestamp":"2024-11-05T03:17:03.519Z"}
+{"level":"info","message":"New user registered: email@mail.cim","timestamp":"2024-11-05T05:32:13.445Z"}
+{"level":"info","message":"Login successful for user: email@mail.cim","timestamp":"2024-11-05T05:32:23.413Z"}
+{"level":"warn","message":"Failed login attempt - user not found: tester","timestamp":"2024-11-05T05:32:38.197Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:36:12.368Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:36:13.785Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:37:13.281Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:37:13.980Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:37:14.323Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:37:14.646Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:37:14.933Z"}
+{"level":"info","message":"New user registered: email@mail.ci","timestamp":"2024-11-05T05:37:17.632Z"}
+{"level":"warn","message":"Registration failed - user already exists: wiz@gmail.com","timestamp":"2024-11-05T05:43:10.350Z"}
+{"level":"warn","message":"Registration failed - user already exists: email@mail.cim","timestamp":"2024-11-05T05:43:26.290Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: wiz","timestamp":"2024-11-05T05:43:39.592Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: wiz","timestamp":"2024-11-05T05:43:43.209Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: wiz","timestamp":"2024-11-05T05:43:44.201Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: wiz","timestamp":"2024-11-05T05:43:44.571Z"}
+{"level":"info","message":"New user registered: wiz@gmail.com","timestamp":"2024-11-05T05:48:12.754Z"}
+{"level":"info","message":"New user registered: email@mail.ci","timestamp":"2024-11-05T05:48:32.218Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: email@mail.ci","timestamp":"2024-11-05T05:49:02.012Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: email@mail.ci","timestamp":"2024-11-05T05:49:17.316Z"}

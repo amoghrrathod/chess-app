@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css?family=Open+Sans:300,400,700');
+
+html, body, .container, #app {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 16px;
+    color: #fff;
+    margin: 0 !important;
+    overflow-x: hidden;
+}
+
+.app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+.form-block-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    transition: all 0.85s ease-in-out;
+}
+
+.form-block-wrapper--is-login {
+    opacity: 0.92;
+    background-color: #2c497f;
+}
+
+.form-block-wrapper--is-signup {
+    opacity: 0.94;
+    background-color: #433b7c;
+}
+
+.form-block {
+    position: relative;
+    margin: 100px auto 0;
+    width: 285px;
+    padding: 25px;
+    background: rgba(255, 255, 255, .13);
+    border-radius: 2px;
+    color: #fff;
+    box-shadow: 0px 0px 16px 9px rgba(0, 0, 0, 0.07);
+}
+
+.form-block__header {
+    margin-bottom: 20px;
+}
+
+.form-block__header h1 {
+    font-size: 30px;
+    margin: 0 0 20px;
+}
+
+.form-block__toggle-block {
+    position: relative;
+}
+
+.form-block__toggle-block span {
+    font-size: 13px;
+    font-weight: 300;
+    color: rgba(255, 255, 255, .65);
+}
+
+/* Fixed input wrapper animations */
+.form-block__input-wrapper {
+    position: relative;
+    height: 126px;
+    overflow: hidden;
+    transition: height 0.5s cubic-bezier(0.36, 1, 0.62, 0.98);
+}
+
+.form-block--is-signup .form-block__input-wrapper {
+    height: 315px;
+}
+
+/* Fixed form group positioning and transitions */
+.form-group--login,
+.form-group--signup {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    transition: transform 0.5s cubic-bezier(0.36, 1, 0.62, 0.98);
+}
+
+.form-group--signup {
+    transform: translateX(100%);
+}
+
+.form-block--is-signup .form-group--login {
+    transform: translateX(-100%);
+}
+
+.form-block--is-signup .form-group--signup {
+    transform: translateX(0);
+}
+
+.form-group__input {
+    display: block;
+    font-size: 15px;
+    color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 10px;
+    margin-bottom: 15px;
+    background: rgba(255, 255, 255, .25);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 1px;
+    transition: all 0.3s ease-in-out;
+}
+
+.form-group__input:focus {
+    outline: none;
+    border: 1px solid #fff;
+    background: transparent;
+}
+
+/* Sequential input animations */
+.form-group--signup .form-group__input {
+    opacity: 0;
+    transform: translateX(50px);
+}
+
+.form-block--is-signup .form-group--signup .form-group__input {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.form-group--signup .form-group__input:nth-of-type(1) { transition-delay: 0.1s; }
+.form-group--signup .form-group__input:nth-of-type(2) { transition-delay: 0.2s; }
+.form-group--signup .form-group__input:nth-of-type(3) { transition-delay: 0.3s; }
+.form-group--signup .form-group__input:nth-of-type(4) { transition-delay: 0.4s; }
+.form-group--signup .form-group__input:nth-of-type(5) { transition-delay: 0.5s; }
+
+.button {
+    display: inline-block;
+    padding: 15px 12px;
+    margin-bottom: 0;
+    font-size: 16px;
+    font-weight: 400;
+    text-transform: uppercase;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    background-image: none;
+    border: none;
+    border-radius: 2px;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0px 0px 13px 8px rgba(0, 0, 0, 0.1);
+}
+
+.button--primary {
+    background: #ed6a5e;
+    color: #fff;
+}
+
+.button:hover {
+    box-shadow: 0px 0px 18px 15px rgba(0, 0, 0, 0.15);
+}
+
+.full-width {
+    width: 100%;
+}
+
+/* Toggle switch styling */
+input[type="checkbox"] {
+    display: none;
+}
+
+input[type="checkbox"] + label {
+    position: relative;
+    display: inline-block;
+    width: 43px;
+    height: 25px;
+    margin-left: 10px;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+input[type="checkbox"] + label:before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 0;
+    width: 43px;
+    height: 8px;
+    background: rgba(255, 255, 255, .4);
+    border-radius: 50px;
+}
+
+input[type="checkbox"] + label:after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    right: 18px;
+    width: 25px;
+    height: 25px;
+    background: #ed6a5e;
+    border-radius: 50%;
+    box-shadow: 1px 1px 0px 0px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease-in-out;
+}
+
+input[type="checkbox"]:checked + label:after {
+    right: 0;
+}
+
+/* Placeholder styles */
+::placeholder {
+    font-weight: 300;
+    color: rgba(255, 255, 255, .5);
+}
+
+/* Error message styling */
+.error-message {
+    color: #ff6b6b;
+    font-size: 12px;
+    margin: -10px 0 10px;
+}

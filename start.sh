@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 cd ./frontend
-PORT=8080 npm run start &
+npm run start &
 cd ../game-backend/
-sudo node server.js 
+sudo node server.js
