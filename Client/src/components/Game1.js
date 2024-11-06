@@ -1,57 +1,78 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Chessboard from "chessboardjsx";
 import { Chess } from "chess.js";
+import io from "socket.io-client";
 
-const ChessGame = () => {
+const socket = io("http://localhost:80"); // Connect to the Socket.io server
+
+const ChessGame = ({ username }) => {
   const [game] = useState(new Chess());
   const [fen, setFen] = useState("start");
   const [turn, setTurn] = useState("w"); // 'w' for White, 'b' for Black
   const [error, setError] = useState(""); // Holds error messages
+  const [isMyTurn, setIsMyTurn] = useState(true); // Track if it's the player's turn
+  const [playerColor, setPlayerColor] = useState("w"); // Default to White for simplicity
+
+  useEffect(() => {
+    // Join the game on mount
+    socket.emit("joinGame", username);
+
+    // Listen for opponent moves
+    socket.on("opponentMove", (moveData) => {
+      game.move(moveData);
+      setFen(game.fen());
+      setTurn(game.turn());
+      setIsMyTurn(turn === playerColor);
+    });
+
+    return () => {
+      socket.off("opponentMove");
+    };
+  }, [game, turn, playerColor, username]);
 
   const onDrop = ({ sourceSquare, targetSquare }) => {
-    // Clear any previous error message
     setError("");
 
     // Check if it's the correct player's turn
-    if (turn !== game.turn()) {
+    if (!isMyTurn) {
       setError("It's not your turn!");
       return;
     }
 
     try {
-      // Attempt to make the move
       const move = game.move({
         from: sourceSquare,
         to: targetSquare,
-        promotion: "q", // Always promote to a queen for simplicity
+        promotion: "q",
       });
 
       if (move) {
-        // If move is valid, update FEN and switch turn
         setFen(game.fen());
-        setTurn(turn === "w" ? "b" : "w");
+        setTurn(game.turn());
+        setIsMyTurn(false); // Switch turns after making a move
+
+        // Send move to server
+        socket.emit("move", move);
       } else {
-        // If move is invalid, show an error (won't change board state)
-        // eslint-disable-next-line
-        setError("Invalid move from ${sourceSquare} to ${targetSquare}.");
+        setError("Invalid move.");
       }
     } catch (error) {
-      // Catch any error thrown by invalid moves and set error message
       setError("Invalid move.");
     }
   };
 
   return (
-    <div style={{ textAlign: "center", padding: "20px" }}>
+    <div className="chess-game-container">
       <h1>Two-Player Chess</h1>
+      <p>Player: {username}</p>
       <p>Current turn: {turn === "w" ? "White" : "Black"}</p>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p className="error-message">{error}</p>}
       <Chessboard
         position={fen}
         onDrop={onDrop}
         width={400}
-        draggable={true} // Allows piece dragging
-        dropOffBoard="snapback" // Resets pieces to the original square on invalid moves
+        draggable={isMyTurn} // Only allow dragging if it's your turn
+        dropOffBoard="snapback" // Resets pieces to original square on invalid moves
       />
     </div>
   );
