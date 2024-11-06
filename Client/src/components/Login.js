@@ -95,7 +95,7 @@ function Login({ setUser }) {
 
         try {
             const endpoint = mode === "login" ? "/api/login" : "/api/register";
-            const response = await fetch(`http://localhost:80${endpoint}`, {
+            const response = await fetch(`http://10.1.4.91:80${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(mode === "login" ? {
