@@ -1,14 +1,12 @@
-// src/components/ChessGame.js
-
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import ReactConfetti from "react-confetti";
 import { useWindowSize } from "react-use";
 import io from "socket.io-client";
-import "./ChessGame.css"; // Optional CSS for ChessGame
+import "./ChessGame.css";
 
-const socket = io("http://localhost:4000"); // Change this to your server address
+const socket = io("http://localhost:5569"); // Change this to your server address
 
 function GameOverModal({ isOpen, message, winner, onNewGame, onExit }) {
   if (!isOpen) return null;
@@ -27,11 +25,12 @@ function GameOverModal({ isOpen, message, winner, onNewGame, onExit }) {
   );
 }
 
-function ChessGame({ username }) {
+function App() {
   const [game, setGame] = useState(new Chess());
   const [moveFrom, setMoveFrom] = useState("");
   const [rightClickedSquares, setRightClickedSquares] = useState({});
   const [moveSquares, setMoveSquares] = useState({});
+  const [optionSquares, setOptionSquares] = useState({});
   const [boardOrientation, setBoardOrientation] = useState("white");
   const [moveHistory, setMoveHistory] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -40,13 +39,17 @@ function ChessGame({ username }) {
     message: "",
     winner: null,
   });
+  const chessboardRef = useRef();
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
+  const [username, setUsername] = useState("");
+  const [gameId, setGameId] = useState(null);
   const [players, setPlayers] = useState([]);
   const [isMyTurn, setIsMyTurn] = useState(false);
 
   useEffect(() => {
-    socket.on("gameJoined", ({ players }) => {
+    socket.on("gameJoined", ({ gameId, players }) => {
+      setGameId(gameId);
       setPlayers(players);
       setIsMyTurn(players.length === 1); // First player to join gets the first turn
     });
@@ -59,21 +62,18 @@ function ChessGame({ username }) {
     socket.on("moveMade", ({ move, board }) => {
       setGame(new Chess(board));
       setIsMyTurn((prev) => !prev); // Toggle turn
-      checkGameState(new Chess(board)); // Check game state after opponent's move
-    });
-
-    socket.on("gameOver", ({ winner }) => {
-      setGameOverState({ isOver: true, message: "Game Over!", winner });
-      setShowConfetti(true);
     });
 
     return () => {
       socket.off("gameJoined");
       socket.off("startGame");
       socket.off("moveMade");
-      socket.off("gameOver");
     };
   }, []);
+
+  const joinGame = () => {
+    socket.emit("joinGame", { username });
+  };
 
   const updateMoveHistory = useCallback((updatedGame) => {
     const moves = updatedGame.history({ verbose: true });
@@ -84,96 +84,286 @@ function ChessGame({ username }) {
     ]);
   }, []);
 
-  const checkGameState = useCallback((updatedGame) => {
-    if (updatedGame.game_over()) {
-      const winner = updatedGame.turn() === "w" ? "Black" : "White";
-      socket.emit("gameOver", { winner });
+  const findKingSquare = useCallback(
+    (color) => {
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          const square = String.fromCharCode(97 + j) + (8 - i);
+          const piece = game.get(square);
+          if (piece && piece.type === "k" && piece.color === color) {
+            return square;
+          }
+        }
+      }
+      return null;
+    },
+    [game],
+  );
+
+  const checkGameState = useCallback(
+    (gameCopy) => {
+      if (gameCopy.isCheck()) {
+        const kingSquare = findKingSquare(gameCopy.turn());
+        if (kingSquare) {
+          setMoveSquares((prev) => ({
+            ...prev,
+            [kingSquare]: { backgroundColor: "rgba(255, 0, 0, 0.4)" },
+          }));
+        }
+      }
+
+      if (gameCopy.isCheckmate()) {
+        const winner = gameCopy.turn() === "w" ? "Black" : "White";
+        setGameOverState({ isOver: true, message: "Checkmate!", winner });
+        setShowConfetti(true);
+      } else if (gameCopy.isStalemate()) {
+        setGameOverState({ isOver: true, message: "Stalemate!", winner: null });
+      } else if (gameCopy.isDraw()) {
+        setGameOverState({ isOver: true, message: "Draw!", winner: null });
+      }
+    },
+    [findKingSquare],
+  );
+
+  useEffect(() => {
+    if (showConfetti) {
+      const timer = setTimeout(() => setShowConfetti(false), 5000);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [showConfetti]);
 
-  const makeMove = (move) => {
-    const updatedGame = { ...game };
-    updatedGame.move(move);
-    updateMoveHistory(updatedGame);
-    checkGameState(updatedGame);
-    socket.emit("moveMade", { move, board: updatedGame.fen() });
-    setGame(updatedGame);
-  };
+  function getMoveOptions(square) {
+    if (!square) return;
 
-  const handleSquareClick = (square) => {
-    if (game.game_over()) return;
-
-    const move = game.move({
-      from: moveFrom,
-      to: square,
-      promotion: "q", // always promote to a queen for simplicity
+    const moves = game.moves({
+      square,
+      verbose: true,
     });
 
-    if (move) {
-      makeMove(move);
-      setMoveFrom("");
-    } else {
-      setMoveFrom(square);
-      // Highlight possible moves for the selected piece
-      const possibleMoves = game.moves({ square, verbose: true });
-      const highlightedMoves = {};
-      possibleMoves.forEach((move) => {
-        highlightedMoves[move.to] = true;
-      });
-      setMoveSquares(highlightedMoves);
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return;
     }
-  };
 
-  const handleRightClick = (square) => {
-    // Right-click functionality to set or clear right-clicked squares
-    setRightClickedSquares((prev) => ({
-      ...prev,
-      [square]: !prev[square],
-    }));
-  };
+    const newSquares = {};
+    moves.forEach((move) => {
+      newSquares[move.to] = {
+        background:
+          game.get(move.to) &&
+          game.get(move.to).color !== game.get(square).color
+            ? "radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)"
+            : "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
+        borderRadius: "50%",
+      };
+    });
+    newSquares[square] = {
+      background: "rgba(255, 255, 0, 0.4)",
+    };
+    setOptionSquares(newSquares);
+  }
 
-  const toggleBoardOrientation = () => {
-    setBoardOrientation((prev) => (prev === "white" ? "black" : "white"));
-  };
+  function onSquareClick(square) {
+    setRightClickedSquares({});
 
-  const toggleDarkMode = () => {
-    setIsDarkMode((prev) => !prev);
-  };
+    function resetFirstMove(square) {
+      const piece = game.get(square);
+      if (piece && piece.color === game.turn()) {
+        setMoveFrom(square);
+        getMoveOptions(square);
+      }
+    }
+
+    if (moveFrom === square) {
+      setMoveFrom("");
+      setOptionSquares({});
+      return;
+    }
+
+    if (!moveFrom) {
+      resetFirstMove(square);
+      return;
+    }
+
+    try {
+      const gameCopy = new Chess(game.fen());
+      const move = gameCopy.move({
+        from: moveFrom,
+        to: square,
+        promotion: "q",
+      });
+
+      if (move === null) {
+        resetFirstMove(square);
+        return;
+      }
+
+      setGame(gameCopy);
+      setMoveFrom("");
+      setOptionSquares({});
+      setMoveSquares({
+        [moveFrom]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+        [square]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+      });
+
+      updateMoveHistory(gameCopy);
+      checkGameState(gameCopy);
+      socket.emit("makeMove", { gameId, move }); // Emit move to server
+    } catch (e) {
+      resetFirstMove(square);
+    }
+  }
+
+  function onPieceDragBegin(piece, sourceSquare) {
+    if (game.get(sourceSquare)?.color === game.turn()) {
+      getMoveOptions(sourceSquare);
+    }
+  }
+
+  function onPieceDragEnd() {
+    setOptionSquares({});
+  }
+
+  const onDrop = useCallback(
+    (sourceSquare, targetSquare) => {
+      if (!isMyTurn) return false; // Prevent moves if it's not the player's turn
+
+      try {
+        const gameCopy = new Chess(game.fen());
+        const move = gameCopy.move({
+          from: sourceSquare,
+          to: targetSquare,
+          promotion: "q",
+        });
+
+        if (move === null) return false;
+
+        setGame(gameCopy);
+        setMoveSquares({
+          [sourceSquare]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+          [targetSquare]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+        });
+
+        updateMoveHistory(gameCopy);
+        checkGameState(gameCopy);
+        socket.emit("makeMove", { gameId, move }); // Emit move to server
+
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    [game, updateMoveHistory, checkGameState, isMyTurn],
+  );
+
+  function flipBoard() {
+    setBoardOrientation(boardOrientation === "white" ? "black" : "white");
+  }
+
+  function resetGame() {
+    setGame(new Chess());
+    setMoveHistory([]);
+    setMoveSquares({});
+    setOptionSquares({});
+    setMoveFrom("");
+    setGameOverState({ isOver: false, message: "", winner: null });
+    socket.emit("resetGame", gameId); // Notify server to reset the game
+  }
+
+  function toggleDarkMode() {
+    setIsDarkMode(!isDarkMode);
+  }
 
   return (
-    <div className={isDarkMode ? "dark-mode" : "light-mode"}>
-      <h1>Chess Game</h1>
-      <h2>Players: {players.join(", ")}</h2>
-      <h3>Your Username: {username}</h3>
-      <button onClick={toggleBoardOrientation}>Toggle Board Orientation</button>
-      <button onClick={toggleDarkMode}>Toggle Dark Mode</button>
-      <Chessboard
-        position={game.fen()}
-        onSquareClick={handleSquareClick}
-        onSquareRightClick={handleRightClick}
-        boardOrientation={boardOrientation}
-        moveSquares={moveSquares}
-        rightClickedSquares={rightClickedSquares}
-      />
+    <div className={`app ${isDarkMode ? "dark-mode" : ""}`}>
+      {showConfetti && <ReactConfetti width={width} height={height} />}
+      <div className="game-container">
+        <div className="board-container">
+          <div className="board-header">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+            />
+            <button onClick={joinGame}>Join Game</button>
+            <button className="control-button" onClick={resetGame}>
+              ↺ New Game
+            </button>
+            <button className="control-button" onClick={flipBoard}>
+              ⇅ Flip Board
+            </button>
+            <button
+              className="control-button mode-toggle"
+              onClick={toggleDarkMode}
+            >
+              {isDarkMode ? "☀️" : "🌙"}
+            </button>
+          </div>
+
+          <Chessboard
+            id="ClickToMove"
+            animationDuration={200}
+            arePiecesDraggable={true}
+            position={game.fen()}
+            onSquareClick={onSquareClick}
+            onPieceDragBegin={onPieceDragBegin}
+            onPieceDragEnd={onPieceDragEnd}
+            onPieceDrop={onDrop}
+            boardOrientation={boardOrientation}
+            customBoardStyle={{
+              borderRadius: "8px",
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.5)",
+            }}
+            customSquareStyles={{
+              ...moveSquares,
+              ...optionSquares,
+              ...rightClickedSquares,
+            }}
+            ref={chessboardRef}
+            boardWidth={560}
+          />
+
+          <div className="board-footer">
+            <div className="player-tags">
+              <div
+                className={`player-tag ${boardOrientation === "white" ? "bottom" : "top"}`}
+              >
+                White
+              </div>
+              <div
+                className={`player-tag ${boardOrientation === "black" ? "bottom" : "top"}`}
+              >
+                Black
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="game-info">
+          <div className="move-history">
+            <h3>♟ Move History</h3>
+            <div className="move-list">
+              {moveHistory.map((move, index) => (
+                <div key={index} className="move-item">
+                  {move}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <GameOverModal
         isOpen={gameOverState.isOver}
         message={gameOverState.message}
         winner={gameOverState.winner}
-        onNewGame={() => {
-          setGame(new Chess());
-          setGameOverState({ isOver: false, message: "", winner: null });
-          setShowConfetti(false);
-          setMoveHistory([]);
-          setRightClickedSquares({});
-          setMoveSquares({});
-        }}
-        onExit={() => {
-          // Handle exit logic
-        }}
+        onNewGame={resetGame}
+        onExit={() =>
+          setGameOverState({ isOver: false, message: "", winner: null })
+        }
       />
-      {showConfetti && <ReactConfetti width={width} height={height} />}
     </div>
   );
 }
 
-export default ChessGame;
+export default App;
