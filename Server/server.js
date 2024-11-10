@@ -12,6 +12,7 @@ const { Server } = require("socket.io"); // Import socket.io here
 const http = require("http"); // Import http module for creating server
 const app = express();
 const PORT = process.env.PORT || 80;
+const PORT_SOCK = process.env.PORT || 5569;
 
 // Middleware
 app.use(cors());
@@ -150,4 +151,7 @@ io.on("connection", (socket) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://10.1.4.91:${PORT}`);
+});
+server.listen(PORT_SOCK, () => {
+  console.log(`Socket.io is running on ${PORT_SOCK}`);
 });
