@@ -70,3 +70,11 @@
 {"level":"warn","message":"Failed login attempt - user not found: ettt","timestamp":"2024-11-06T06:47:02.757Z"}
 {"level":"info","message":"Login successful for user: test","timestamp":"2024-11-06T06:47:15.327Z"}
 {"level":"warn","message":"Failed login attempt - user not found: ettt","timestamp":"2024-11-06T06:47:28.143Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: pass","timestamp":"2024-11-10T15:06:47.622Z"}
+{"level":"warn","message":"Failed login attempt - user not found: test","timestamp":"2024-11-10T15:06:52.537Z"}
+{"level":"info","message":"New user registered: a@a.c","timestamp":"2024-11-10T15:07:21.233Z"}
+{"level":"info","message":"Login successful for user: amo","timestamp":"2024-11-10T15:25:40.992Z"}
+{"level":"warn","message":"Failed login attempt - incorrect password for user: pass","timestamp":"2024-11-10T15:31:10.018Z"}
+{"level":"info","message":"Login successful for user: amo","timestamp":"2024-11-10T15:31:12.513Z"}
+{"level":"info","message":"Login successful for user: amo","timestamp":"2024-11-10T15:35:38.211Z"}
+{"level":"info","message":"Login successful for user: amo","timestamp":"2024-11-10T15:37:55.866Z"}
