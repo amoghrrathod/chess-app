@@ -1,18 +1,20 @@
-// server.js
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const connectDB = require("./db");
 const logger = require("./logger");
 const User = require("./User");
-const { Server } = require("socket.io"); // Import socket.io here
-const http = require("http"); // Import http module for creating server
+const { Server } = require("socket.io");
+const http = require("http");
+
 const app = express();
 const PORT = process.env.PORT || 80;
-const PORT_SOCK = process.env.PORT || 5569;
+const PORT_SOCK = process.env.PORT_SOCK || 5569;
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
 // Middleware
 app.use(cors());
@@ -21,12 +23,174 @@ app.use(bodyParser.json());
 // MongoDB connection
 connectDB();
 
-// Login endpoint with password comparison
+// Game state management
+const games = new Map();
+
+function generateGameCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// Create HTTP server and integrate it with socket.io
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+// Socket.io setup - Remove the JWT middleware and handle authentication differently
+io.on("connection", (socket) => {
+  console.log("New connection attempt");
+
+  // Handle authentication after connection
+  socket.on("authenticate", ({ token, username }) => {
+    if (!token) {
+      socket.emit("authError", "No token provided");
+      return;
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      socket.user = { username: username || decoded.username };
+      socket.emit("authenticated");
+      console.log(`User authenticated: ${socket.user.username}`);
+
+      // Send available rooms only after authentication
+      const availableRooms = Array.from(games.entries())
+        .filter(([_, game]) => game.players.length === 1)
+        .map(([code, game]) => ({
+          code,
+          host: game.players[0].username,
+        }));
+
+      socket.emit("roomsList", availableRooms);
+    } catch (err) {
+      socket.emit("authError", "Invalid token");
+    }
+  });
+
+  socket.on("createRoom", ({ username }) => {
+    if (!socket.user) {
+      socket.emit("error", "Not authenticated");
+      return;
+    }
+
+    const roomCode = generateGameCode(); // Generate the game code
+    console.log(`Generated room code: ${roomCode}`); // Log the generated code
+
+    games.set(roomCode, {
+      players: [
+        { username: socket.user.username, socket: socket.id, color: "white" },
+      ],
+      gameState: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Initial FEN
+    });
+
+    console.log(`Room created with code: ${roomCode}`); // Log room creation
+    socket.join(roomCode);
+    socket.emit("roomJoined", { roomCode, playerColor: "white" });
+
+    // Emit the updated rooms list
+    io.emit(
+      "roomsList",
+      Array.from(games.entries())
+        .filter(([_, game]) => game.players.length === 1)
+        .map(([code, game]) => ({
+          code,
+          host: game.players[0].username,
+        })),
+    );
+  });
+
+  socket.on("joinRoom", ({ roomCode }) => {
+    if (!socket.user) {
+      socket.emit("error", "Not authenticated");
+      return;
+    }
+
+    const game = games.get(roomCode);
+    if (game && game.players.length === 1) {
+      game.players.push({
+        username: socket.user.username,
+        socket: socket.id,
+        color: "black",
+      });
+
+      socket.join(roomCode);
+      socket.emit("roomJoined", { roomCode, playerColor: "black" });
+
+      io.to(roomCode).emit("gameStart", {
+        white: game.players[0].username,
+        black: game.players[1].username,
+        fen: game.gameState,
+      });
+
+      // Update available rooms list
+      io.emit(
+        "roomsList",
+        Array.from(games.entries())
+          .filter(([_, game]) => game.players.length === 1)
+          .map(([code, game]) => ({
+            code,
+            host: game.players[0].username,
+          })),
+      );
+    } else {
+      socket.emit("error", "Room not available");
+    }
+  });
+
+  socket.on("makeMove", ({ roomCode, move, fen }) => {
+    if (!socket.user) {
+      socket.emit("error", "Not authenticated");
+      return;
+    }
+
+    const game = games.get(roomCode);
+    if (game) {
+      game.gameState = fen;
+      socket.to(roomCode).emit("moveMade", { move, fen });
+    }
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.user) {
+      console.log(`User disconnected: ${socket.user.username}`);
+
+      // Clean up games
+      for (const [code, game] of games.entries()) {
+        const playerIndex = game.players.findIndex(
+          (p) => p.socket === socket.id,
+        );
+        if (playerIndex !== -1) {
+          game.players.splice(playerIndex, 1);
+          if (game.players.length === 0) {
+            games.delete(code);
+          } else {
+            io.to(code).emit("playerLeft", { username: socket.user.username });
+          }
+        }
+      }
+
+      // Update available rooms
+      io.emit(
+        "roomsList",
+        Array.from(games.entries())
+          .filter(([_, game]) => game.players.length === 1)
+          .map(([code, game]) => ({
+            code,
+            host: game.players[0].username,
+          })),
+      );
+    }
+  });
+});
+
+// Login endpoint
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // Find user by username or email
     const user = await User.findOne({
       $or: [{ username: username }, { email: username }],
     });
@@ -36,7 +200,6 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Compare password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       logger.warn(
@@ -47,13 +210,18 @@ app.post("/api/login", async (req, res) => {
 
     logger.info(`Login successful for user: ${username}`);
 
-    // Return user data (excluding password)
-    const userData = user.toObject();
-    delete userData.password;
+    const token = jwt.sign({ username: user.username }, JWT_SECRET, {
+      expiresIn: "24h",
+    });
 
     return res.status(200).json({
       message: "Login successful!",
-      user: userData,
+      token,
+      user: {
+        username: user.username,
+        email: user.email,
+        fullname: user.fullname,
+      },
     });
   } catch (error) {
     logger.error(
@@ -63,95 +231,11 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Registration endpoint
-app.post("/api/register", async (req, res) => {
-  const { username, email, password, fullname } = req.body;
-
-  try {
-    // Validate username format
-    if (!username || username.length < 3 || !/^[a-zA-Z0-9_]+$/.test(username)) {
-      return res.status(400).json({
-        message:
-          "Username must be at least 3 characters and can only contain letters, numbers, and underscores",
-      });
-    }
-
-    // Check if username or email already exists
-    const existingUser = await User.findOne({
-      $or: [{ username: username }, { email: email }],
-    });
-
-    if (existingUser) {
-      logger.warn(`Registration failed - user already exists: ${email}`);
-      return res.status(400).json({
-        message:
-          existingUser.email === email
-            ? "Email already registered"
-            : "Username already taken",
-      });
-    }
-
-    // Create new user
-    const newUser = new User({
-      username,
-      email,
-      password,
-      fullname,
-    });
-
-    await newUser.save();
-
-    logger.info(`New user registered: ${email}`);
-
-    // Return user data (excluding password)
-    const userData = newUser.toObject();
-    delete userData.password;
-
-    res.status(201).json({
-      message: "Registration successful!",
-      user: userData,
-    });
-  } catch (error) {
-    logger.error(`Registration error for email ${email}: ${error.message}`);
-    res.status(500).json({
-      message:
-        error.code === 11000
-          ? "Email or username already exists"
-          : "Server error during registration",
-    });
-  }
-});
-
-// Create HTTP server and integrate it with socket.io
-const server = http.createServer(app); // Create the server with express
-const io = new Server(server, {
-  cors: {
-    origin: "*", // Allow all origins
-    methods: ["GET", "POST"],
-  },
-});
-
-// Socket.io setup
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  socket.on("joinGame", (username) => {
-    socket.username = username;
-    socket.join("chess-game"); // Join room for chess game
-  });
-
-  socket.on("move", (moveData) => {
-    socket.to("chess-game").emit("opponentMove", moveData);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`${socket.username} disconnected`);
-  });
-});
-// Start the server
+// Start the servers
 app.listen(PORT, () => {
-  console.log(`Server is running on http://10.1.4.91:${PORT}`);
+  console.log(`HTTP Server is running on http://10.1.4.91:${PORT}`);
 });
+
 server.listen(PORT_SOCK, () => {
-  console.log(`Socket.io is running on ${PORT_SOCK}`);
+  console.log(`Socket.io Server is running on port ${PORT_SOCK}`);
 });

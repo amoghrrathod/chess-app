@@ -3,10 +3,11 @@ import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import ReactConfetti from "react-confetti";
 import { useWindowSize } from "react-use";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "./ChessGame.css";
 
-const socket = io("http://localhost:5569"); // Change this to your server address
+const socket = io("http://localhost:5569");
 
 function GameOverModal({ isOpen, message, winner, onNewGame, onExit }) {
   if (!isOpen) return null;
@@ -25,7 +26,10 @@ function GameOverModal({ isOpen, message, winner, onNewGame, onExit }) {
   );
 }
 
-function App() {
+function ChessGame({ user }) {
+  const { roomCode } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [game, setGame] = useState(new Chess());
   const [moveFrom, setMoveFrom] = useState("");
   const [rightClickedSquares, setRightClickedSquares] = useState({});
@@ -39,41 +43,57 @@ function App() {
     message: "",
     winner: null,
   });
+  const [isOnlineGame, setIsOnlineGame] = useState(false);
+  const [playerColor, setPlayerColor] = useState("white");
+  const [opponent, setOpponent] = useState(null);
+  const [isMyTurn, setIsMyTurn] = useState(true);
   const chessboardRef = useRef();
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
-  const [username, setUsername] = useState("");
-  const [gameId, setGameId] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [isMyTurn, setIsMyTurn] = useState(false);
 
+  // Initialize online game
   useEffect(() => {
-    socket.on("gameJoined", ({ gameId, players }) => {
-      setGameId(gameId);
-      setPlayers(players);
-      setIsMyTurn(players.length === 1); // First player to join gets the first turn
-    });
+    if (roomCode) {
+      setIsOnlineGame(true);
+      const color = location.state?.playerColor || "white";
+      setPlayerColor(color);
+      setBoardOrientation(color);
+      setIsMyTurn(color === "white");
 
-    socket.on("startGame", ({ board }) => {
-      setGame(new Chess(board));
-      setIsMyTurn(true); // Assuming the first player starts
-    });
+      // Listen for opponent's moves
+      socket.on("moveMade", ({ move, fen }) => {
+        const gameCopy = new Chess(fen);
+        setGame(gameCopy);
+        setIsMyTurn(true);
+        updateMoveHistory(gameCopy);
+        checkGameState(gameCopy);
+      });
 
-    socket.on("moveMade", ({ move, board }) => {
-      setGame(new Chess(board));
-      setIsMyTurn((prev) => !prev); // Toggle turn
-    });
+      // Listen for game start
+      socket.on("gameStart", ({ white, black, fen }) => {
+        setOpponent(user?.username === white ? black : white);
+        if (fen) {
+          const gameCopy = new Chess(fen);
+          setGame(gameCopy);
+        }
+      });
 
-    return () => {
-      socket.off("gameJoined");
-      socket.off("startGame");
-      socket.off("moveMade");
-    };
-  }, []);
+      // Listen for player disconnection
+      socket.on("playerLeft", ({ username }) => {
+        setGameOverState({
+          isOver: true,
+          message: "Opponent disconnected",
+          winner: user?.username,
+        });
+      });
 
-  const joinGame = () => {
-    socket.emit("joinGame", { username });
-  };
+      return () => {
+        socket.off("moveMade");
+        socket.off("gameStart");
+        socket.off("playerLeft");
+      };
+    }
+  }, [roomCode, user?.username, location.state]);
 
   const updateMoveHistory = useCallback((updatedGame) => {
     const moves = updatedGame.history({ verbose: true });
@@ -114,7 +134,15 @@ function App() {
 
       if (gameCopy.isCheckmate()) {
         const winner = gameCopy.turn() === "w" ? "Black" : "White";
-        setGameOverState({ isOver: true, message: "Checkmate!", winner });
+        setGameOverState({
+          isOver: true,
+          message: "Checkmate!",
+          winner: isOnlineGame
+            ? winner.toLowerCase() === playerColor
+              ? user?.username
+              : opponent
+            : winner,
+        });
         setShowConfetti(true);
       } else if (gameCopy.isStalemate()) {
         setGameOverState({ isOver: true, message: "Stalemate!", winner: null });
@@ -122,7 +150,7 @@ function App() {
         setGameOverState({ isOver: true, message: "Draw!", winner: null });
       }
     },
-    [findKingSquare],
+    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent],
   );
 
   useEffect(() => {
@@ -163,6 +191,9 @@ function App() {
   }
 
   function onSquareClick(square) {
+    // Prevent moves if it's not your turn in online game
+    if (isOnlineGame && !isMyTurn) return;
+
     setRightClickedSquares({});
 
     function resetFirstMove(square) {
@@ -205,15 +236,22 @@ function App() {
         [square]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
       });
 
+      if (isOnlineGame) {
+        socket.emit("makeMove", { roomCode, move, fen: gameCopy.fen() });
+        setIsMyTurn(false);
+      }
+
       updateMoveHistory(gameCopy);
       checkGameState(gameCopy);
-      socket.emit("makeMove", { gameId, move }); // Emit move to server
     } catch (e) {
       resetFirstMove(square);
     }
   }
 
   function onPieceDragBegin(piece, sourceSquare) {
+    // Prevent moves if it's not your turn in online game
+    if (isOnlineGame && !isMyTurn) return false;
+
     if (game.get(sourceSquare)?.color === game.turn()) {
       getMoveOptions(sourceSquare);
     }
@@ -225,7 +263,8 @@ function App() {
 
   const onDrop = useCallback(
     (sourceSquare, targetSquare) => {
-      if (!isMyTurn) return false; // Prevent moves if it's not the player's turn
+      // Prevent moves if it's not your turn in online game
+      if (isOnlineGame && !isMyTurn) return false;
 
       try {
         const gameCopy = new Chess(game.fen());
@@ -243,30 +282,39 @@ function App() {
           [targetSquare]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
         });
 
+        if (isOnlineGame) {
+          socket.emit("makeMove", { roomCode, move, fen: gameCopy.fen() });
+          setIsMyTurn(false);
+        }
+
         updateMoveHistory(gameCopy);
         checkGameState(gameCopy);
-        socket.emit("makeMove", { gameId, move }); // Emit move to server
 
         return true;
       } catch (e) {
         return false;
       }
     },
-    [game, updateMoveHistory, checkGameState, isMyTurn],
+    [game, updateMoveHistory, checkGameState, isOnlineGame, isMyTurn, roomCode],
   );
 
   function flipBoard() {
-    setBoardOrientation(boardOrientation === "white" ? "black" : "white");
+    if (!isOnlineGame) {
+      setBoardOrientation(boardOrientation === "white" ? "black" : "white");
+    }
   }
 
   function resetGame() {
-    setGame(new Chess());
-    setMoveHistory([]);
-    setMoveSquares({});
-    setOptionSquares({});
-    setMoveFrom("");
-    setGameOverState({ isOver: false, message: "", winner: null });
-    socket.emit("resetGame", gameId); // Notify server to reset the game
+    if (isOnlineGame) {
+      navigate("/room");
+    } else {
+      setGame(new Chess());
+      setMoveHistory([]);
+      setMoveSquares({});
+      setOptionSquares({});
+      setMoveFrom("");
+      setGameOverState({ isOver: false, message: "", winner: null });
+    }
   }
 
   function toggleDarkMode() {
@@ -279,19 +327,26 @@ function App() {
       <div className="game-container">
         <div className="board-container">
           <div className="board-header">
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-            />
-            <button onClick={joinGame}>Join Game</button>
+            <div className="player-info">
+              {isOnlineGame ? (
+                <>
+                  <span>
+                    You: {user?.username} ({playerColor})
+                  </span>
+                  {opponent && <span>Opponent: {opponent}</span>}
+                </>
+              ) : (
+                <span>Local Game</span>
+              )}
+            </div>
             <button className="control-button" onClick={resetGame}>
-              ↺ New Game
+              {isOnlineGame ? "Exit Game" : "↺ New Game"}
             </button>
-            <button className="control-button" onClick={flipBoard}>
-              ⇅ Flip Board
-            </button>
+            {!isOnlineGame && (
+              <button className="control-button" onClick={flipBoard}>
+                ⇅ Flip Board
+              </button>
+            )}
             <button
               className="control-button mode-toggle"
               onClick={toggleDarkMode}
@@ -326,14 +381,22 @@ function App() {
           <div className="board-footer">
             <div className="player-tags">
               <div
-                className={`player-tag ${boardOrientation === "white" ? "bottom" : "top"}`}
+                className={`player-tag ${
+                  boardOrientation === "white" ? "bottom" : "top"
+                }`}
               >
                 White
+                {isOnlineGame &&
+                  ` (${playerColor === "white" ? user?.username : opponent})`}
               </div>
               <div
-                className={`player-tag ${boardOrientation === "black" ? "bottom" : "top"}`}
+                className={`player-tag ${
+                  boardOrientation === "black" ? "bottom" : "top"
+                }`}
               >
                 Black
+                {isOnlineGame &&
+                  ` (${playerColor === "black" ? user?.username : opponent})`}
               </div>
             </div>
           </div>
@@ -349,6 +412,11 @@ function App() {
                 </div>
               ))}
             </div>
+            {isOnlineGame && (
+              <div className="turn-indicator">
+                {isMyTurn ? "Your turn" : "Opponent's turn"}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -358,12 +426,15 @@ function App() {
         message={gameOverState.message}
         winner={gameOverState.winner}
         onNewGame={resetGame}
-        onExit={() =>
-          setGameOverState({ isOver: false, message: "", winner: null })
-        }
+        onExit={() => {
+          setGameOverState({ isOver: false, message: "", winner: null });
+          if (isOnlineGame) {
+            navigate("/room");
+          }
+        }}
       />
     </div>
   );
 }
 
-export default App;
+export default ChessGame;
