@@ -1,31 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
-
 import io from "socket.io-client";
+
 class SocketService {
   constructor() {
     this.socket = null;
-    this.token = null;
     this.username = null;
   }
 
-  connect(token, username) {
+  connect(username) {
     if (this.socket) {
       return;
     }
 
-    this.token = token;
     this.username = username;
 
-    this.socket = io("http://localhost:5569", {
+    this.socket = io("http://localhost:80", {
       transports: ["websocket"],
-      autoConnect: true,
     });
 
     this.socket.on("connect", () => {
       console.log("Socket connected");
-      this.authenticate();
     });
 
     this.socket.on("connect_error", (error) => {
@@ -35,92 +31,16 @@ class SocketService {
     return this.socket;
   }
 
-  authenticate() {
-    if (this.socket && this.token && this.username) {
-      this.socket.emit("authenticate", {
-        token: this.token,
-        username: this.username,
-      });
-    }
-  }
-
   disconnect() {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
   }
-
-  // Helper methods for game actions
-  createRoom() {
-    if (this.socket) {
-      this.socket.emit("createRoom", { username: this.username });
-    }
-  }
-
-  joinRoom(roomCode) {
-    if (this.socket) {
-      this.socket.emit("joinRoom", { roomCode });
-    }
-  }
-
-  makeMove(roomCode, move, fen) {
-    if (this.socket) {
-      this.socket.emit("makeMove", { roomCode, move, fen });
-    }
-  }
-
-  // Add event listeners
-  onAuthenticated(callback) {
-    if (this.socket) {
-      this.socket.on("authenticated", callback);
-    }
-  }
-
-  onAuthError(callback) {
-    if (this.socket) {
-      this.socket.on("authError", callback);
-    }
-  }
-
-  onRoomsList(callback) {
-    if (this.socket) {
-      this.socket.on("roomsList", callback);
-    }
-  }
-
-  onRoomJoined(callback) {
-    if (this.socket) {
-      this.socket.on("roomJoined", callback);
-    }
-  }
-
-  onGameStart(callback) {
-    if (this.socket) {
-      this.socket.on("gameStart", callback);
-    }
-  }
-
-  onMoveMade(callback) {
-    if (this.socket) {
-      this.socket.on("moveMade", callback);
-    }
-  }
-
-  onPlayerLeft(callback) {
-    if (this.socket) {
-      this.socket.on("playerLeft", callback);
-    }
-  }
-
-  onError(callback) {
-    if (this.socket) {
-      this.socket.on("error", callback);
-    }
-  }
 }
 
 const socketService = new SocketService();
+
 function Login({ setUser }) {
   const [mode, setMode] = useState("login");
   const [formData, setFormData] = useState({
@@ -128,7 +48,7 @@ function Login({ setUser }) {
     password: "",
     fullname: "",
     email: "",
-    signupUsername: "", // New field for signup username
+    signupUsername: "",
     repeatPassword: "",
   });
   const [errors, setErrors] = useState({});
@@ -136,6 +56,10 @@ function Login({ setUser }) {
 
   const toggleMode = () => {
     setMode((prevMode) => (prevMode === "login" ? "signup" : "login"));
+    resetForm();
+  };
+
+  const resetForm = () => {
     setFormData({
       username: "",
       password: "",
@@ -197,7 +121,6 @@ function Login({ setUser }) {
       ...prev,
       [id]: value,
     }));
-    // Clear error when user starts typing
     if (errors[id]) {
       setErrors((prev) => ({
         ...prev,
@@ -206,7 +129,6 @@ function Login({ setUser }) {
     }
   };
 
-  // In your Login.js component, update the handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -216,7 +138,7 @@ function Login({ setUser }) {
 
     try {
       const endpoint = mode === "login" ? "/api/login" : "/api/register";
-      const response = await fetch(`http://localhost${endpoint}`, {
+      const response = await fetch(`http://localhost:80${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
@@ -235,18 +157,15 @@ function Login({ setUser }) {
       });
 
       const data = await response.json();
+      console.log(data); // Log the response for debugging
 
       if (response.ok) {
-        // Store token in localStorage
-        localStorage.setItem("chessToken", data.token);
-
         if (setUser) {
           setUser(data.user);
         }
 
-        // Initialize socket connection
-        socketService.connect(data.token, data.user.username);
-
+        socketService.connect(data.user.username);
+        // Navigate to Home after successful login
         navigate("/home");
       } else {
         setErrors((prev) => ({
@@ -255,6 +174,7 @@ function Login({ setUser }) {
         }));
       }
     } catch (error) {
+      console.error("Fetch error:", error);
       setErrors((prev) => ({
         ...prev,
         submit: "Network error. Please try again.",
@@ -279,6 +199,12 @@ function Login({ setUser }) {
       )
     );
   };
+
+  useEffect(() => {
+    return () => {
+      socketService.disconnect(); // Clean up socket connection on unmount
+    };
+  }, []);
 
   return (
     <div className={`app app--is-${mode}`}>
@@ -387,7 +313,7 @@ function Login({ setUser }) {
               )}
             </div>
           </div>
-          <button className="button button--primary full-width" type="submit">
+          <button className="button button --primary full-width" type="submit">
             {mode === "login" ? "Log In" : "Sign Up"}
           </button>
         </form>

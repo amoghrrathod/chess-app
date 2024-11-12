@@ -7,7 +7,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "./ChessGame.css";
 
-const socket = io("http://localhost:5569");
+const socket = io("http://localhost:80");
 
 function GameOverModal({ isOpen, message, winner, onNewGame, onExit }) {
   if (!isOpen) return null;

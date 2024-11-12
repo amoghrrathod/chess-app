@@ -16,7 +16,7 @@ class SocketService {
     this.token = token;
     this.username = username;
 
-    this.socket = io("http://localhost:5569", {
+    this.socket = io("http://localhost:80", {
       transports: ["websocket"],
       autoConnect: true,
     });
