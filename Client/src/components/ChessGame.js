@@ -74,13 +74,36 @@ function ChessGame({ user }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
 
+  useEffect(() => {
+    if (roomCode) {
+      setIsOnlineGame(true);
+      const color = location.state?.playerColor || "white";
+      setPlayerColor(color);
+      setBoardOrientation(color);
+      setIsMyTurn(color === "white");
+
+      // Join room
+      socket.emit("joinChessRoom", {
+        roomCode,
+        username: user?.username,
+        token: localStorage.getItem("token"),
+      });
+    }
+  }, [roomCode, user?.username, location.state, playerColor]);
+
   const updateMoveHistory = useCallback((updatedGame) => {
     const moves = updatedGame.history({ verbose: true });
     const lastMove = moves[moves.length - 1];
-    setMoveHistory((prevHistory) => [
-      ...prevHistory,
-      `${moves.length}. ${lastMove.color === "w" ? "" : "..."}${lastMove.san}`,
-    ]);
+
+    if (lastMove) {
+      setMoveHistory((prevHistory) => [
+        ...prevHistory,
+        `${moves.length}. ${lastMove.color === "w" ? "" : "..."}${lastMove.san}`,
+      ]);
+    } else {
+      // Handle the case where there are no moves yet
+      setMoveHistory([]);
+    }
   }, []);
 
   const findKingSquare = useCallback(
@@ -96,7 +119,7 @@ function ChessGame({ user }) {
       }
       return null;
     },
-    [game]
+    [game],
   );
 
   const checkGameState = useCallback(
@@ -129,24 +152,11 @@ function ChessGame({ user }) {
         setGameOverState({ isOver: true, message: "Draw!", winner: null });
       }
     },
-    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent]
+    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent],
   );
   // Initialize online game
   useEffect(() => {
     if (roomCode) {
-      setIsOnlineGame(true);
-      const color = location.state?.playerColor || "white";
-      setPlayerColor(color);
-      setBoardOrientation(color);
-      setIsMyTurn(color === "white");
-
-      // Join room
-      socket.emit("joinChessRoom", {
-        roomCode,
-        username: user?.username,
-        token: localStorage.getItem("token"),
-      });
-
       // Listen for game start
       socket.on("gameStart", (data) => {
         console.log("Game started with data:", data);
@@ -361,7 +371,7 @@ function ChessGame({ user }) {
       roomCode,
       gameStarted,
       playerColor,
-    ]
+    ],
   );
 
   function flipBoard() {
