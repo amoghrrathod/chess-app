@@ -4,11 +4,32 @@ import { Chess } from "chess.js";
 import ReactConfetti from "react-confetti";
 import { useWindowSize } from "react-use";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import io from "socket.io-client";
 import "./ChessGame.css";
 
-const socket = io("http://localhost:80");
+import io from "socket.io-client";
 
+const socket = io("http://localhost:5569", {
+  transports: ["websocket", "polling"],
+  autoConnect: true,
+});
+
+function WaitingRoom({ roomCode, onCancel }) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2>Waiting for Opponent</h2>
+        <p>Share this room code with your friend:</p>
+        <div className="room-code">{roomCode}</div>
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+        </div>
+        <button onClick={onCancel} className="cancel-button">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 function GameOverModal({ isOpen, message, winner, onNewGame, onExit }) {
   if (!isOpen) return null;
 
@@ -47,6 +68,8 @@ function ChessGame({ user }) {
   const [playerColor, setPlayerColor] = useState("white");
   const [opponent, setOpponent] = useState(null);
   const [isMyTurn, setIsMyTurn] = useState(true);
+  const [isWaiting, setIsWaiting] = useState(true);
+  const [gameStarted, setGameStarted] = useState(false);
   const chessboardRef = useRef();
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
@@ -60,22 +83,39 @@ function ChessGame({ user }) {
       setBoardOrientation(color);
       setIsMyTurn(color === "white");
 
+      // Join room
+      socket.emit("joinChessRoom", {
+        roomCode,
+        username: user?.username,
+        token: localStorage.getItem("token"),
+      });
+
+      // Listen for game start
+      socket.on("gameStart", (data) => {
+        console.log("Game started with data:", data);
+        setIsWaiting(false);
+        setGameStarted(true);
+      });
+
+      socket.on("roomStatus", ({ players, status }) => {
+        console.log("Room status updated:", status, players);
+        if (status === "waiting") {
+          setIsWaiting(true);
+          setGameStarted(false);
+        } else if (status === "ready") {
+          setIsWaiting(false);
+          setGameStarted(true);
+        }
+      });
+
       // Listen for opponent's moves
       socket.on("moveMade", ({ move, fen }) => {
+        console.log("Move received:", move, fen);
         const gameCopy = new Chess(fen);
         setGame(gameCopy);
         setIsMyTurn(true);
         updateMoveHistory(gameCopy);
         checkGameState(gameCopy);
-      });
-
-      // Listen for game start
-      socket.on("gameStart", ({ white, black, fen }) => {
-        setOpponent(user?.username === white ? black : white);
-        if (fen) {
-          const gameCopy = new Chess(fen);
-          setGame(gameCopy);
-        }
       });
 
       // Listen for player disconnection
@@ -88,9 +128,11 @@ function ChessGame({ user }) {
       });
 
       return () => {
-        socket.off("moveMade");
+        socket.emit("leaveRoom", { roomCode });
         socket.off("gameStart");
+        socket.off("moveMade");
         socket.off("playerLeft");
+        socket.off("roomStatus");
       };
     }
   }, [roomCode, user?.username, location.state]);
@@ -117,7 +159,7 @@ function ChessGame({ user }) {
       }
       return null;
     },
-    [game],
+    [game]
   );
 
   const checkGameState = useCallback(
@@ -150,7 +192,7 @@ function ChessGame({ user }) {
         setGameOverState({ isOver: true, message: "Draw!", winner: null });
       }
     },
-    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent],
+    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent]
   );
 
   useEffect(() => {
@@ -193,6 +235,7 @@ function ChessGame({ user }) {
   function onSquareClick(square) {
     // Prevent moves if it's not your turn in online game
     if (isOnlineGame && !isMyTurn) return;
+    if (isOnlineGame && !gameStarted) return;
 
     setRightClickedSquares({});
 
@@ -237,7 +280,13 @@ function ChessGame({ user }) {
       });
 
       if (isOnlineGame) {
-        socket.emit("makeMove", { roomCode, move, fen: gameCopy.fen() });
+        console.log("Emitting move:", move, gameCopy.fen());
+        socket.emit("makeMove", {
+          roomCode,
+          move,
+          fen: gameCopy.fen(),
+          playerColor,
+        });
         setIsMyTurn(false);
       }
 
@@ -263,8 +312,8 @@ function ChessGame({ user }) {
 
   const onDrop = useCallback(
     (sourceSquare, targetSquare) => {
-      // Prevent moves if it's not your turn in online game
       if (isOnlineGame && !isMyTurn) return false;
+      if (isOnlineGame && !gameStarted) return false;
 
       try {
         const gameCopy = new Chess(game.fen());
@@ -283,7 +332,13 @@ function ChessGame({ user }) {
         });
 
         if (isOnlineGame) {
-          socket.emit("makeMove", { roomCode, move, fen: gameCopy.fen() });
+          console.log("Emitting move:", move, gameCopy.fen());
+          socket.emit("makeMove", {
+            roomCode,
+            move,
+            fen: gameCopy.fen(),
+            playerColor,
+          });
           setIsMyTurn(false);
         }
 
@@ -295,7 +350,16 @@ function ChessGame({ user }) {
         return false;
       }
     },
-    [game, updateMoveHistory, checkGameState, isOnlineGame, isMyTurn, roomCode],
+    [
+      game,
+      updateMoveHistory,
+      checkGameState,
+      isOnlineGame,
+      isMyTurn,
+      roomCode,
+      gameStarted,
+      playerColor,
+    ]
   );
 
   function flipBoard() {
@@ -319,6 +383,17 @@ function ChessGame({ user }) {
 
   function toggleDarkMode() {
     setIsDarkMode(!isDarkMode);
+  }
+  if (isOnlineGame && isWaiting) {
+    return (
+      <WaitingRoom
+        roomCode={roomCode}
+        onCancel={() => {
+          socket.emit("leaveRoom", { roomCode });
+          navigate("/room");
+        }}
+      />
+    );
   }
 
   return (

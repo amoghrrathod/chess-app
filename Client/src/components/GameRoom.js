@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:80");
+const socket = io("http://localhost:5569", {
+  transports: ["websocket", "polling"],
+  autoConnect: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
 
 const GameRoom = ({ user }) => {
   const [roomCode, setRoomCode] = useState("");
@@ -10,39 +15,63 @@ const GameRoom = ({ user }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Authenticate the user when the component mounts
-    socket.emit("authenticate", { username: user.username });
+    // Authenticate when component mounts
+    socket.emit("authenticate", {
+      token: localStorage.getItem("token"),
+      username: user.username,
+    });
 
-    // Listen for the list of available rooms
+    // Listen for authentication success
+    socket.on("authenticated", () => {
+      console.log("Socket authenticated");
+    });
+
+    // Listen for room events
+    socket.on("roomCreated", ({ roomCode, playerColor }) => {
+      navigate(`/chess/${roomCode}`, { state: { playerColor } });
+    });
+
+    socket.on("roomJoined", ({ roomCode, playerColor }) => {
+      navigate(`/chess/${roomCode}`, { state: { playerColor } });
+    });
+
     socket.on("roomsList", (rooms) => {
       setAvailableRooms(rooms);
     });
 
-    // Clean up the socket listener on unmount
-    return () => {
-      socket.off("roomsList");
-    };
-  }, [user.username]);
+    socket.on("error", (error) => {
+      console.error("Socket error:", error);
+      alert(error);
+    });
+    socket.on("connect_error", (error) => {
+      console.error("Connection error:", error.message);
+    });
 
-  const generateGameCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
+    socket.on("disconnect", (reason) => {
+      console.log("Disconnected:", reason);
+    });
+
+    return () => {
+      socket.off("authenticated");
+      socket.off("roomCreated");
+      socket.off("roomJoined");
+      socket.off("roomsList");
+      socket.off("error");
+    };
+  }, [user.username, navigate]);
 
   const handleCreateRoom = () => {
-    const code = generateGameCode();
-    socket.emit("createRoom", { username: user.username }); // Emit create room event
-    navigate(`/chess/${code}`); // Navigate to the room
+    socket.emit("createRoom", { username: user.username });
   };
 
   const handleJoinRoom = () => {
     if (roomCode) {
       socket.emit("joinRoom", { roomCode });
-      navigate(`/chess/${roomCode}`); // Navigate to the chess game
     }
   };
 
   const handlePlayLocally = () => {
-    navigate("/chess"); // Navigate to the local chess game component
+    navigate("/chess");
   };
 
   return (
@@ -61,7 +90,7 @@ const GameRoom = ({ user }) => {
             type="text"
             placeholder="Enter Room Code"
             value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value)}
+            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
             className="border p-2 rounded w-full"
           />
           <button
@@ -80,10 +109,19 @@ const GameRoom = ({ user }) => {
         </button>
 
         <h3 className="text-lg font-semibold">Available Rooms:</h3>
-        <ul>
+        <ul className="space-y-2">
           {availableRooms.map((room) => (
-            <li key={room.code}>
-              Room Code: {room.code}, Host: {room.host}
+            <li key={room.code} className="border p-2 rounded">
+              Room Code: {room.code} - Host: {room.host}
+              <button
+                className="ml-4 bg-green-500 text-white px-3 py-1 rounded"
+                onClick={() => {
+                  setRoomCode(room.code);
+                  handleJoinRoom();
+                }}
+              >
+                Join
+              </button>
             </li>
           ))}
         </ul>

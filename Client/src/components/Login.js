@@ -9,15 +9,18 @@ class SocketService {
     this.username = null;
   }
 
-  connect(username) {
+  connect(username, token) {
     if (this.socket) {
       return;
     }
 
     this.username = username;
 
-    this.socket = io("http://localhost:80", {
+    this.socket = io("http://localhost:5569", {
       transports: ["websocket"],
+      auth: {
+        token: token,
+      },
     });
 
     this.socket.on("connect", () => {
@@ -152,19 +155,30 @@ function Login({ setUser }) {
                 password: formData.password,
                 fullname: formData.fullname,
                 email: formData.email,
-              },
+              }
         ),
       });
 
       const data = await response.json();
-      console.log(data); // Log the response for debugging
 
       if (response.ok) {
+        // Store the token in localStorage
+        localStorage.setItem("token", data.token);
+
+        // Update the user context
         if (setUser) {
-          setUser(data.user);
+          setUser({
+            ...data.user,
+            token: data.token,
+          });
         }
 
-        socketService.connect(data.user.username);
+        // Connect socket with token
+        socketService.connect(
+          mode === "login" ? data.user.username : formData.signupUsername,
+          data.token
+        );
+
         // Navigate to Home after successful login
         navigate("/home");
       } else {
@@ -181,6 +195,42 @@ function Login({ setUser }) {
       }));
     }
   };
+
+  // Check for existing token on component mount
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      // Verify token validity with backend
+      fetch("http://localhost:80/api/verify-token", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.valid) {
+            setUser({
+              ...data.user,
+              token,
+            });
+            socketService.connect(data.user.username, token);
+            navigate("/home");
+          } else {
+            localStorage.removeItem("token");
+          }
+        })
+        .catch((error) => {
+          console.error("Token verification error:", error);
+          localStorage.removeItem("token");
+        });
+    }
+  }, [setUser, navigate]);
+
+  // useEffect(() => {
+  //   return () => {
+  //     socketService.disconnect(); // Clean up socket connection on unmount
+  //   };
+  // }, []);
 
   const renderError = (fieldName) => {
     return (
@@ -199,12 +249,6 @@ function Login({ setUser }) {
       )
     );
   };
-
-  useEffect(() => {
-    return () => {
-      socketService.disconnect(); // Clean up socket connection on unmount
-    };
-  }, []);
 
   return (
     <div className={`app app--is-${mode}`}>
@@ -313,7 +357,7 @@ function Login({ setUser }) {
               )}
             </div>
           </div>
-          <button className="button button --primary full-width" type="submit">
+          <button className="button button--primary full-width" type="submit">
             {mode === "login" ? "Log In" : "Sign Up"}
           </button>
         </form>
