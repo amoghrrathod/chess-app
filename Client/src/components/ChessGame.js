@@ -74,65 +74,6 @@ function ChessGame({ user }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
 
-  // Initialize online game
-  useEffect(() => {
-    if (roomCode) {
-      setIsOnlineGame(true);
-      const color = location.state?.playerColor || "white";
-      setPlayerColor(color);
-      setBoardOrientation(color);
-      setIsMyTurn(color === "white");
-
-      // Join room
-      socket.emit("joinChessRoom", {
-        roomCode,
-        username: user?.username,
-        token: localStorage.getItem("token"),
-      });
-
-      // Listen for game start
-      socket.on("gameStart", (data) => {
-        console.log("Game started with data:", data);
-        setOpponent(data[playerColor === "white" ? "black" : "white"]);
-        setIsWaiting(false);
-        setGameStarted(true);
-        setGame(new Chess(data.fen));
-        setIsMyTurn(data.currentTurn === playerColor);
-      });
-      socket.on("moveMade", ({ move, fen, currentTurn }) => {
-        console.log("Received move from opponent:", move, fen);
-        const gameCopy = new Chess(fen);
-        setGame(gameCopy);
-        setMoveSquares({
-          [move.from]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
-          [move.to]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
-        });
-        setIsMyTurn(currentTurn === playerColor);
-        updateMoveHistory(gameCopy);
-        checkGameState(gameCopy);
-      });
-
-      socket.on("roomStatus", ({ players, status }) => {
-        console.log("Room status updated:", status, players);
-        if (status === "waiting") {
-          setIsWaiting(true);
-          setGameStarted(false);
-        } else if (status === "ready") {
-          setIsWaiting(false);
-          setGameStarted(true);
-          // Set opponent name based on player color
-          setOpponent(players[playerColor === "white" ? "black" : "white"]);
-        }
-      });
-
-      // Clean up function
-      return () => {
-        socket.off("gameStart");
-        socket.off("roomStatus");
-      };
-    }
-  }, [roomCode, user?.username, location.state, playerColor]);
-
   const updateMoveHistory = useCallback((updatedGame) => {
     const moves = updatedGame.history({ verbose: true });
     const lastMove = moves[moves.length - 1];
@@ -190,6 +131,71 @@ function ChessGame({ user }) {
     },
     [findKingSquare, isOnlineGame, playerColor, user?.username, opponent]
   );
+  // Initialize online game
+  useEffect(() => {
+    if (roomCode) {
+      setIsOnlineGame(true);
+      const color = location.state?.playerColor || "white";
+      setPlayerColor(color);
+      setBoardOrientation(color);
+      setIsMyTurn(color === "white");
+
+      // Join room
+      socket.emit("joinChessRoom", {
+        roomCode,
+        username: user?.username,
+        token: localStorage.getItem("token"),
+      });
+
+      // Listen for game start
+      socket.on("gameStart", (data) => {
+        console.log("Game started with data:", data);
+        setOpponent(data[playerColor === "white" ? "black" : "white"]);
+        setIsWaiting(false);
+        setGameStarted(true);
+        setGame(new Chess(data.fen));
+        setIsMyTurn(data.currentTurn === playerColor);
+      });
+      socket.on("moveMade", ({ move, fen, currentTurn }) => {
+        console.log("Received move from opponent:", move, fen);
+        const gameCopy = new Chess(fen);
+        setGame(gameCopy);
+        setMoveSquares({
+          [move.from]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+          [move.to]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+        });
+        setIsMyTurn(currentTurn === playerColor);
+        updateMoveHistory(gameCopy);
+        checkGameState(gameCopy);
+      });
+
+      socket.on("roomStatus", ({ players, status }) => {
+        console.log("Room status updated:", status, players);
+        if (status === "waiting") {
+          setIsWaiting(true);
+          setGameStarted(false);
+        } else if (status === "ready") {
+          setIsWaiting(false);
+          setGameStarted(true);
+          // Set opponent name based on player color
+          setOpponent(players[playerColor === "white" ? "black" : "white"]);
+        }
+      });
+
+      // Clean up function
+      return () => {
+        socket.off("gameStart");
+        socket.off("roomStatus");
+      };
+    }
+  }, [
+    roomCode,
+    user?.username,
+    location.state,
+    playerColor,
+    updateMoveHistory,
+    checkGameState,
+  ]);
 
   useEffect(() => {
     if (showConfetti) {
