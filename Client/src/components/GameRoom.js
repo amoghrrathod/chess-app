@@ -17,10 +17,9 @@ const GameRoom = ({ user }) => {
   useEffect(() => {
     // Authenticate when component mounts
     socket.emit("authenticate", {
-      token: localStorage.getItem("token"),
+      token: localStorage.getItem("username"),
       username: user.username,
     });
-
     // Listen for authentication success
     socket.on("authenticated", () => {
       console.log("Socket authenticated");

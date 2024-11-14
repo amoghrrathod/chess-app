@@ -93,8 +93,23 @@ function ChessGame({ user }) {
       // Listen for game start
       socket.on("gameStart", (data) => {
         console.log("Game started with data:", data);
+        setOpponent(data[playerColor === "white" ? "black" : "white"]);
         setIsWaiting(false);
         setGameStarted(true);
+        setGame(new Chess(data.fen));
+        setIsMyTurn(data.currentTurn === playerColor);
+      });
+      socket.on("moveMade", ({ move, fen, currentTurn }) => {
+        console.log("Received move from opponent:", move, fen);
+        const gameCopy = new Chess(fen);
+        setGame(gameCopy);
+        setMoveSquares({
+          [move.from]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+          [move.to]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+        });
+        setIsMyTurn(currentTurn === playerColor);
+        updateMoveHistory(gameCopy);
+        checkGameState(gameCopy);
       });
 
       socket.on("roomStatus", ({ players, status }) => {
@@ -105,37 +120,18 @@ function ChessGame({ user }) {
         } else if (status === "ready") {
           setIsWaiting(false);
           setGameStarted(true);
+          // Set opponent name based on player color
+          setOpponent(players[playerColor === "white" ? "black" : "white"]);
         }
       });
 
-      // Listen for opponent's moves
-      socket.on("moveMade", ({ move, fen }) => {
-        console.log("Move received:", move, fen);
-        const gameCopy = new Chess(fen);
-        setGame(gameCopy);
-        setIsMyTurn(true);
-        updateMoveHistory(gameCopy);
-        checkGameState(gameCopy);
-      });
-
-      // Listen for player disconnection
-      socket.on("playerLeft", ({ username }) => {
-        setGameOverState({
-          isOver: true,
-          message: "Opponent disconnected",
-          winner: user?.username,
-        });
-      });
-
+      // Clean up function
       return () => {
-        socket.emit("leaveRoom", { roomCode });
         socket.off("gameStart");
-        socket.off("moveMade");
-        socket.off("playerLeft");
         socket.off("roomStatus");
       };
     }
-  }, [roomCode, user?.username, location.state]);
+  }, [roomCode, user?.username, location.state, playerColor]);
 
   const updateMoveHistory = useCallback((updatedGame) => {
     const moves = updatedGame.history({ verbose: true });

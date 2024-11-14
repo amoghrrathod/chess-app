@@ -1,48 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
-import io from "socket.io-client";
-
-class SocketService {
-  constructor() {
-    this.socket = null;
-    this.username = null;
-  }
-
-  connect(username, token) {
-    if (this.socket) {
-      return;
-    }
-
-    this.username = username;
-
-    this.socket = io("http://localhost:5569", {
-      transports: ["websocket"],
-      auth: {
-        token: token,
-      },
-    });
-
-    this.socket.on("connect", () => {
-      console.log("Socket connected");
-    });
-
-    this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-    });
-
-    return this.socket;
-  }
-
-  disconnect() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
-  }
-}
-
-const socketService = new SocketService();
 
 function Login({ setUser }) {
   const [mode, setMode] = useState("login");
@@ -160,77 +118,53 @@ function Login({ setUser }) {
       });
 
       const data = await response.json();
+      console.log("API Response:", data);
 
       if (response.ok) {
-        // Store the token in localStorage
-        localStorage.setItem("token", data.token);
+        // Store username in localStorage
+        const username =
+          mode === "login" ? formData.username : formData.signupUsername;
+        localStorage.setItem("username", username);
 
-        // Update the user context
-        if (setUser) {
-          setUser({
-            ...data.user,
-            token: data.token,
-          });
-        }
+        // Update user context
+        setUser(data.user);
 
-        // Connect socket with token
-        socketService.connect(
-          mode === "login" ? data.user.username : formData.signupUsername,
-          data.token
-        );
-
-        // Navigate to Home after successful login
         navigate("/home");
       } else {
-        setErrors((prev) => ({
-          ...prev,
-          submit: data.message || "An error occurred",
-        }));
+        throw new Error(data.message || "Authentication failed");
       }
     } catch (error) {
-      console.error("Fetch error:", error);
+      console.error("Error during authentication:", error);
       setErrors((prev) => ({
         ...prev,
-        submit: "Network error. Please try again.",
+        submit: error.message || "Authentication failed. Please try again.",
       }));
+      // Clean up on error
+      localStorage.removeItem("username");
     }
   };
 
-  // Check for existing token on component mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Verify token validity with backend
-      fetch("http://localhost:80/api/verify-token", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+    const username = localStorage.getItem("username");
+
+    if (username) {
+      // Verify username is still valid
+      fetch(`http://localhost:80/api/verify-user/${username}`)
         .then((response) => response.json())
         .then((data) => {
           if (data.valid) {
-            setUser({
-              ...data.user,
-              token,
-            });
-            socketService.connect(data.user.username, token);
+            setUser(data.user);
             navigate("/home");
           } else {
-            localStorage.removeItem("token");
+            throw new Error("Invalid user");
           }
         })
         .catch((error) => {
-          console.error("Token verification error:", error);
-          localStorage.removeItem("token");
+          console.error("User verification error:", error);
+          localStorage.removeItem("username");
         });
     }
   }, [setUser, navigate]);
-
-  // useEffect(() => {
-  //   return () => {
-  //     socketService.disconnect(); // Clean up socket connection on unmount
-  //   };
-  // }, []);
 
   const renderError = (fieldName) => {
     return (
