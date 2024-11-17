@@ -1,0 +1,142 @@
+/* Reset styles only for game room */
+.gameroom-app {
+  margin: 0;
+  padding: 0;
+  background-color: #111827;
+  min-height: 100vh;
+}
+
+/* Scope all game room styles under a parent class */
+.gameroom-app {
+  /* Container */
+  .game-container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #111827;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  .game-content {
+    width: 100%;
+    max-width: 450px;
+    margin: 0 auto;
+  }
+
+  .game-title {
+    font-size: 24px;
+    color: white;
+    font-weight: bold;
+    margin-bottom: 32px;
+  }
+
+  /* Controls */
+  .controls-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  .btn-create {
+    width: 100%;
+    background-color: #3b82f6;
+  }
+
+  .btn-join {
+    background-color: #10b981;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .btn-play {
+    width: 100%;
+    background-color: #f59e0b;
+  }
+
+  .btn-join-small {
+    background-color: #10b981;
+    padding: 4px 12px;
+  }
+
+  /* Join room */
+  .join-container {
+    display: flex;
+    width: 100%;
+  }
+
+  .room-input {
+    flex: 1;
+    padding: 8px 12px;
+    background-color: #1f2937;
+    color: white;
+    border: none;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+
+    &:focus {
+      outline: none;
+      background-color: #2d3748;
+    }
+  }
+
+  /* Rooms section */
+  .rooms-section {
+    margin-top: 32px;
+  }
+
+  .rooms-title {
+    font-size: 20px;
+    color: white;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+
+  .rooms-container {
+    background-color: #1f2937;
+    border-radius: 4px;
+    padding: 16px;
+  }
+
+  .no-rooms {
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  .room-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #374151;
+    padding: 8px 12px;
+    border-radius: 4px;
+  }
+
+  .room-code {
+    color: black;
+  }
+}

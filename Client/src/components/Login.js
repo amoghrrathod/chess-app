@@ -1,126 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
+const PORT = process.env.PORT || 80;
+const LOCAL_IP = process.env.LOCAL_IP || "localhost";
 
-import io from "socket.io-client";
-class SocketService {
-  constructor() {
-    this.socket = null;
-    this.token = null;
-    this.username = null;
-  }
-
-  connect(token, username) {
-    if (this.socket) {
-      return;
-    }
-
-    this.token = token;
-    this.username = username;
-
-    this.socket = io("http://localhost:5569", {
-      transports: ["websocket"],
-      autoConnect: true,
-    });
-
-    this.socket.on("connect", () => {
-      console.log("Socket connected");
-      this.authenticate();
-    });
-
-    this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-    });
-
-    return this.socket;
-  }
-
-  authenticate() {
-    if (this.socket && this.token && this.username) {
-      this.socket.emit("authenticate", {
-        token: this.token,
-        username: this.username,
-      });
-    }
-  }
-
-  disconnect() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
-  }
-
-  // Helper methods for game actions
-  createRoom() {
-    if (this.socket) {
-      this.socket.emit("createRoom", { username: this.username });
-    }
-  }
-
-  joinRoom(roomCode) {
-    if (this.socket) {
-      this.socket.emit("joinRoom", { roomCode });
-    }
-  }
-
-  makeMove(roomCode, move, fen) {
-    if (this.socket) {
-      this.socket.emit("makeMove", { roomCode, move, fen });
-    }
-  }
-
-  // Add event listeners
-  onAuthenticated(callback) {
-    if (this.socket) {
-      this.socket.on("authenticated", callback);
-    }
-  }
-
-  onAuthError(callback) {
-    if (this.socket) {
-      this.socket.on("authError", callback);
-    }
-  }
-
-  onRoomsList(callback) {
-    if (this.socket) {
-      this.socket.on("roomsList", callback);
-    }
-  }
-
-  onRoomJoined(callback) {
-    if (this.socket) {
-      this.socket.on("roomJoined", callback);
-    }
-  }
-
-  onGameStart(callback) {
-    if (this.socket) {
-      this.socket.on("gameStart", callback);
-    }
-  }
-
-  onMoveMade(callback) {
-    if (this.socket) {
-      this.socket.on("moveMade", callback);
-    }
-  }
-
-  onPlayerLeft(callback) {
-    if (this.socket) {
-      this.socket.on("playerLeft", callback);
-    }
-  }
-
-  onError(callback) {
-    if (this.socket) {
-      this.socket.on("error", callback);
-    }
-  }
-}
-
-const socketService = new SocketService();
 function Login({ setUser }) {
   const [mode, setMode] = useState("login");
   const [formData, setFormData] = useState({
@@ -128,7 +11,7 @@ function Login({ setUser }) {
     password: "",
     fullname: "",
     email: "",
-    signupUsername: "", // New field for signup username
+    signupUsername: "",
     repeatPassword: "",
   });
   const [errors, setErrors] = useState({});
@@ -136,6 +19,10 @@ function Login({ setUser }) {
 
   const toggleMode = () => {
     setMode((prevMode) => (prevMode === "login" ? "signup" : "login"));
+    resetForm();
+  };
+
+  const resetForm = () => {
     setFormData({
       username: "",
       password: "",
@@ -197,7 +84,6 @@ function Login({ setUser }) {
       ...prev,
       [id]: value,
     }));
-    // Clear error when user starts typing
     if (errors[id]) {
       setErrors((prev) => ({
         ...prev,
@@ -206,7 +92,6 @@ function Login({ setUser }) {
     }
   };
 
-  // In your Login.js component, update the handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -216,7 +101,7 @@ function Login({ setUser }) {
 
     try {
       const endpoint = mode === "login" ? "/api/login" : "/api/register";
-      const response = await fetch(`http://localhost${endpoint}`, {
+      const response = await fetch(`http://${LOCAL_IP}:${PORT}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
@@ -230,37 +115,58 @@ function Login({ setUser }) {
                 password: formData.password,
                 fullname: formData.fullname,
                 email: formData.email,
-              },
+              }
         ),
       });
 
       const data = await response.json();
+      console.log("API Response:", data);
 
       if (response.ok) {
-        // Store token in localStorage
-        localStorage.setItem("chessToken", data.token);
+        // Store username in localStorage
+        const username =
+          mode === "login" ? formData.username : formData.signupUsername;
+        localStorage.setItem("username", username);
 
-        if (setUser) {
-          setUser(data.user);
-        }
-
-        // Initialize socket connection
-        socketService.connect(data.token, data.user.username);
+        // Update user context
+        setUser(data.user);
 
         navigate("/home");
       } else {
-        setErrors((prev) => ({
-          ...prev,
-          submit: data.message || "An error occurred",
-        }));
+        throw new Error(data.message || "Authentication failed");
       }
     } catch (error) {
+      console.error("Error during authentication:", error);
       setErrors((prev) => ({
         ...prev,
-        submit: "Network error. Please try again.",
+        submit: error.message || "Authentication failed. Please try again.",
       }));
+      // Clean up on error
+      localStorage.removeItem("username");
     }
   };
+
+  useEffect(() => {
+    const username = localStorage.getItem("username");
+
+    if (username) {
+      // Verify username is still valid
+      fetch(`http://${LOCAL_IP}:${PORT}/api/verify-user/${username}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.valid) {
+            setUser(data.user);
+            navigate("/home");
+          } else {
+            throw new Error("Invalid user");
+          }
+        })
+        .catch((error) => {
+          console.error("User verification error:", error);
+          localStorage.removeItem("username");
+        });
+    }
+  }, [setUser, navigate]);
 
   const renderError = (fieldName) => {
     return (

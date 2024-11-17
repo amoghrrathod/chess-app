@@ -1,0 +1,188 @@
+.home-app {
+  background-color: #111827;
+  min-height: 100vh;
+  color: white;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Welcome Section */
+.welcome-card {
+  background: linear-gradient(to right, #8b5cf6, #6366f1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-text {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-subtext {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+}
+
+/* Gallery Title */
+.gallery-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  text-align: center;
+  margin: 2rem 0 3rem;
+  color: white;
+}
+
+/* Game Gallery Grid */
+.game-gallery {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 2rem;
+}
+
+@media (min-width: 768px) {
+  .game-gallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Game Card */
+.game-card {
+  background-color: #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.game-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Game Image Container */
+.game-image-container {
+  position: relative;
+  padding-top: 56.25%; /* 16:9 aspect ratio */
+  overflow: hidden;
+}
+
+.game-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .game-image {
+  transform: scale(1.05);
+}
+
+/* Image Overlay */
+.game-image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+}
+
+/* Game Content */
+.game-content {
+  padding: 1.5rem;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.game-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+.game-card:hover .game-title {
+  color: #a78bfa;
+}
+
+.game-meta {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.game-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-players {
+  background-color: #7c3aed;
+  color: white;
+}
+
+.badge-difficulty {
+  background-color: #4f46e5;
+  color: white;
+}
+
+.game-description {
+  color: #9ca3af;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.play-now {
+  display: flex;
+  align-items: center;
+  color: #a78bfa;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: transform 0.3s ease;
+}
+
+.play-now svg {
+  margin-left: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .play-now svg {
+  transform: translateX(4px);
+}
+
+.logout-button {
+  padding: 8px 16px;
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #ff5252;
+}

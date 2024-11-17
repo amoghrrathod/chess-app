@@ -1,103 +1,142 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
-const socket = io("http://localhost:5569");
+import "./GameRoom.css";
+
+const SOCKET_PORT = 5569;
+const LOCAL_IP = process.env.LOCAL_IP || "localhost";
+
+const socket = io(`http://${LOCAL_IP}:${SOCKET_PORT}`, {
+  transports: ["websocket", "polling"],
+  autoConnect: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
+
 const GameRoom = ({ user }) => {
-  const [rooms, setRooms] = useState([]);
-  const [gameCode, setGameCode] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [availableRooms, setAvailableRooms] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Listen for available rooms
-    socket.on("roomsList", (roomsList) => {
-      setRooms(roomsList);
+    // Authenticate when component mounts
+    socket.emit("authenticate", {
+      token: localStorage.getItem("username"),
+      username: user.username,
+    });
+    // Listen for authentication success
+    socket.on("authenticated", () => {
+      console.log("Socket authenticated");
+    });
+
+    // Listen for room events
+    socket.on("roomCreated", ({ roomCode, playerColor }) => {
+      navigate(`/chess/${roomCode}`, { state: { playerColor } });
     });
 
     socket.on("roomJoined", ({ roomCode, playerColor }) => {
       navigate(`/chess/${roomCode}`, { state: { playerColor } });
     });
 
+    socket.on("roomsList", (rooms) => {
+      setAvailableRooms(rooms);
+    });
+
+    socket.on("error", (error) => {
+      console.error("Socket error:", error);
+      alert(error);
+    });
+    socket.on("connect_error", (error) => {
+      console.error("Connection error:", error.message);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Disconnected:", reason);
+    });
+
     return () => {
-      socket.off("roomsList");
+      socket.off("authenticated");
+      socket.off("roomCreated");
       socket.off("roomJoined");
+      socket.off("roomsList");
+      socket.off("error");
     };
-  }, [navigate]);
+  }, [user.username, navigate]);
 
-  const createGame = () => {
-    console.log("Create Game button clicked");
-    console.log("User :", user);
-    if (user?.username) {
-      socket.emit("createRoom", { username: user.username });
-    } else {
-      console.error("User  is not defined or username is missing");
+  const handleCreateRoom = () => {
+    socket.emit("createRoom", { username: user.username });
+  };
+
+  const handleJoinRoom = () => {
+    if (roomCode) {
+      socket.emit("joinRoom", { roomCode });
     }
   };
 
-  const joinGame = () => {
-    if (gameCode) {
-      socket.emit("joinRoom", { roomCode: gameCode, username: user?.username });
-    }
+  const handlePlayLocally = () => {
+    navigate("/chess");
   };
-
   return (
-    <div className="container mx-auto p-4">
-      <div className="w-full max-w-2xl mx-auto border rounded-lg shadow-lg">
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-bold">
-            Welcome, {user?.username || "Guest"}
-          </h2>
-        </div>
-        <div className="p-4">
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <button
-                className="w-full bg-blue-500 text-white py-2 rounded"
-                onClick={createGame}
-              >
-                Create New Game
-              </button>
-            </div>
+    <div className="gameroom-app">
+      <div className="game-container">
+        <div className="game-content">
+          {/* Title */}
+          <h1 className="game-title">Game Room</h1>
 
-            <div className="flex gap-2">
+          {/* Buttons Container */}
+          <div className="controls-container">
+            {/* Create Room */}
+            <button onClick={handleCreateRoom} className="btn btn-create">
+              ➕ Create Room
+            </button>
+
+            {/* Join Room */}
+            <div className="join-container">
               <input
                 type="text"
-                placeholder="Enter game code"
-                value={gameCode}
-                onChange={(e) => setGameCode(e.target.value)}
-                className="border rounded p-2 flex-1"
+                placeholder="Enter Room Code"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                className="room-input"
               />
-              <button
-                className="bg-green-500 text-white py-2 rounded"
-                onClick={joinGame}
-              >
-                Join Game
+              <button onClick={handleJoinRoom} className="btn btn-join">
+                Join
               </button>
             </div>
 
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-4">Available Rooms</h3>
-              <div className="grid gap-4">
-                {rooms.map((room) => (
-                  <div
-                    key={room.code}
-                    className="p-4 border rounded-lg flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-medium">Room: {room.code}</p>
-                      <p className="text-sm text-gray-600">Host: {room.host}</p>
+            {/* Play Locally */}
+            <button onClick={handlePlayLocally} className="btn btn-play">
+              🎮 Play Locally
+            </button>
+          </div>
+
+          {/* Available Rooms */}
+          <div className="rooms-section">
+            <h2 className="rooms-title">Available Rooms</h2>
+
+            <div className="rooms-container">
+              {availableRooms.length === 0 ? (
+                <p className="no-rooms">No rooms available</p>
+              ) : (
+                <div className="room-list">
+                  {availableRooms.map((room) => (
+                    <div key={room.code} className="room-item">
+                      <span className="room-code" color="black">
+                        Room Code: {room.code}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setRoomCode(room.code);
+                          handleJoinRoom();
+                        }}
+                        className="btn btn-join-small"
+                      >
+                        Join
+                      </button>
                     </div>
-                    <button
-                      className="bg-blue-500 text-white py-2 rounded"
-                      onClick={() => {
-                        setGameCode(room.code);
-                        joinGame();
-                      }}
-                    >
-                      Join
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
