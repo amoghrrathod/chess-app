@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
+import "./GameRoom.css";
 
-const socket = io("http://localhost:5569", {
+const SOCKET_PORT = 5569;
+const LOCAL_IP = process.env.LOCAL_IP || "localhost";
+
+const socket = io(`http://${LOCAL_IP}:${SOCKET_PORT}`, {
   transports: ["websocket", "polling"],
   autoConnect: true,
   reconnectionAttempts: 5,
@@ -72,58 +76,70 @@ const GameRoom = ({ user }) => {
   const handlePlayLocally = () => {
     navigate("/chess");
   };
-
   return (
-    <div className="container mx-auto p-4">
-      <h2 className="text-xl font-bold">Game Room</h2>
-      <div className="space-y-4">
-        <button
-          className="w-full bg-blue-500 text-white py-2 rounded"
-          onClick={handleCreateRoom}
-        >
-          Create Room
-        </button>
+    <div className="gameroom-app">
+      <div className="game-container">
+        <div className="game-content">
+          {/* Title */}
+          <h1 className="game-title">Game Room</h1>
 
-        <div>
-          <input
-            type="text"
-            placeholder="Enter Room Code"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            className="border p-2 rounded w-full"
-          />
-          <button
-            className="w-full bg-green-500 text-white py-2 rounded mt-2"
-            onClick={handleJoinRoom}
-          >
-            Join Room
-          </button>
-        </div>
+          {/* Buttons Container */}
+          <div className="controls-container">
+            {/* Create Room */}
+            <button onClick={handleCreateRoom} className="btn btn-create">
+              ➕ Create Room
+            </button>
 
-        <button
-          className="w-full bg-yellow-500 text-white py-2 rounded"
-          onClick={handlePlayLocally}
-        >
-          Play Locally
-        </button>
-
-        <h3 className="text-lg font-semibold">Available Rooms:</h3>
-        <ul className="space-y-2">
-          {availableRooms.map((room) => (
-            <li key={room.code} className="border p-2 rounded">
-              Room Code: {room.code} - Host: {room.host}
-              <button
-                className="ml-4 bg-green-500 text-white px-3 py-1 rounded"
-                onClick={() => {
-                  setRoomCode(room.code);
-                  handleJoinRoom();
-                }}
-              >
+            {/* Join Room */}
+            <div className="join-container">
+              <input
+                type="text"
+                placeholder="Enter Room Code"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                className="room-input"
+              />
+              <button onClick={handleJoinRoom} className="btn btn-join">
                 Join
               </button>
-            </li>
-          ))}
-        </ul>
+            </div>
+
+            {/* Play Locally */}
+            <button onClick={handlePlayLocally} className="btn btn-play">
+              🎮 Play Locally
+            </button>
+          </div>
+
+          {/* Available Rooms */}
+          <div className="rooms-section">
+            <h2 className="rooms-title">Available Rooms</h2>
+
+            <div className="rooms-container">
+              {availableRooms.length === 0 ? (
+                <p className="no-rooms">No rooms available</p>
+              ) : (
+                <div className="room-list">
+                  {availableRooms.map((room) => (
+                    <div key={room.code} className="room-item">
+                      <span className="room-code" color="black">
+                        Room Code: {room.code}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setRoomCode(room.code);
+                          handleJoinRoom();
+                        }}
+                        className="btn btn-join-small"
+                      >
+                        Join
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

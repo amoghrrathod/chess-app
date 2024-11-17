@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
+const PORT = process.env.PORT || 80;
+const LOCAL_IP = process.env.LOCAL_IP || "localhost";
 
 function Login({ setUser }) {
   const [mode, setMode] = useState("login");
@@ -99,7 +101,7 @@ function Login({ setUser }) {
 
     try {
       const endpoint = mode === "login" ? "/api/login" : "/api/register";
-      const response = await fetch(`http://localhost:80${endpoint}`, {
+      const response = await fetch(`http://${LOCAL_IP}:${PORT}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
@@ -149,7 +151,7 @@ function Login({ setUser }) {
 
     if (username) {
       // Verify username is still valid
-      fetch(`http://localhost:80/api/verify-user/${username}`)
+      fetch(`http://${LOCAL_IP}:${PORT}/api/verify-user/${username}`)
         .then((response) => response.json())
         .then((data) => {
           if (data.valid) {

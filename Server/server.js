@@ -13,13 +13,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
 
 const PORT = process.env.PORT || 80;
 const SOCKET_PORT = 5569;
+const LOCAL_IP = process.env.LOCAL_IP || localhost;
 
 // Middleware
 app.use(cors());
@@ -284,12 +285,70 @@ app.get("/api/verify-user/:username", async (req, res) => {
     res.status(500).json({ valid: false, message: "Server error" });
   }
 });
+// Registration endpoint
+app.post("/api/register", async (req, res) => {
+  const { username, email, password, fullname } = req.body;
+
+  try {
+    // Validate username format
+    if (!username || username.length < 3 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({
+        message:
+          "Username must be at least 3 characters and can only contain letters, numbers, and underscores",
+      });
+    }
+
+    // Check if username or email already exists
+    const existingUser = await User.findOne({
+      $or: [{ username: username }, { email: email }],
+    });
+
+    if (existingUser) {
+      logger.warn(`Registration failed - user already exists: ${email}`);
+      return res.status(400).json({
+        message:
+          existingUser.email === email
+            ? "Email already registered"
+            : "Username already taken",
+      });
+    }
+
+    // Create new user
+    const newUser = new User({
+      username,
+      email,
+      password,
+      fullname,
+    });
+
+    await newUser.save();
+
+    logger.info(`New user registered: ${email}`);
+
+    // Return user data (excluding password)
+    const userData = newUser.toObject();
+    delete userData.password;
+
+    res.status(201).json({
+      message: "Registration successful!",
+      user: userData,
+    });
+  } catch (error) {
+    logger.error(`Registration error for email ${email}: ${error.message}`);
+    res.status(500).json({
+      message:
+        error.code === 11000
+          ? "Email or username already exists"
+          : "Server error during registration",
+    });
+  }
+});
 
 // Start the servers
 app.listen(PORT, () => {
-  console.log(`HTTP Server running on http://localhost:${PORT}`);
+  console.log(`HTTP Server running on http://${LOCAL_IP}:${PORT}`);
 });
 
 server.listen(SOCKET_PORT, () => {
-  console.log(`Socket.IO server running on http://localhost:${SOCKET_PORT}`);
+  console.log(`Socket.IO server running on http://${LOCAL_IP}:${SOCKET_PORT}`);
 });
