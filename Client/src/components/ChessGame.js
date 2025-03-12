@@ -7,8 +7,8 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import "./ChessGame.css";
 
 import io from "socket.io-client";
-const SOCKET_PORT = 5569;
-const LOCAL_IP = process.env.LOCAL_IP || "localhost";
+const SOCKET_PORT = process.env.REACT_APP_SOCKET_PORT;
+const LOCAL_IP = process.env.REACT_APP_LOCAL_IP || "localhost";
 
 const socket = io(`http://${LOCAL_IP}:${SOCKET_PORT}`, {
   transports: ["websocket", "polling"],
@@ -123,7 +123,7 @@ function ChessGame({ user }) {
       }
       return null;
     },
-    [game],
+    [game]
   );
 
   const checkGameState = useCallback(
@@ -156,7 +156,7 @@ function ChessGame({ user }) {
         setGameOverState({ isOver: true, message: "Draw!", winner: null });
       }
     },
-    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent],
+    [findKingSquare, isOnlineGame, playerColor, user?.username, opponent]
   );
   // Initialize online game
   useEffect(() => {
@@ -375,7 +375,7 @@ function ChessGame({ user }) {
       roomCode,
       gameStarted,
       playerColor,
-    ],
+    ]
   );
 
   function flipBoard() {

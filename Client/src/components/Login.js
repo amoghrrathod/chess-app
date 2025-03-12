@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
-const PORT = process.env.PORT || 80;
-const LOCAL_IP = process.env.LOCAL_IP || "localhost";
+const PORT = process.env.REACT_APP_PORT || 80;
+const LOCAL_IP = process.env.REACT_APP_LOCAL_IP || "localhost";
 
 function Login({ setUser }) {
   const [mode, setMode] = useState("login");

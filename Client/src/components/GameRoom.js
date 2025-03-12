@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "./GameRoom.css";
 
-const SOCKET_PORT = 5569;
-const LOCAL_IP = process.env.LOCAL_IP || "localhost";
+const SOCKET_PORT = process.env.REACT_APP_SOCKET_PORT || 5569;
+const LOCAL_IP = process.env.REACT_APP_LOCAL_IP || "localhost";
 
 const socket = io(`http://${LOCAL_IP}:${SOCKET_PORT}`, {
   transports: ["websocket", "polling"],

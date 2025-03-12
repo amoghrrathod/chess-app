@@ -40,7 +40,6 @@ function generateRoomCode() {
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
-  console.log("New client connected");
 
   // Handle authentication
   socket.on("authenticate", async ({ username }) => {

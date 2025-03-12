@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" width="100" height="300">
+  <!-- Background -->
+  <rect width="200" height="100" fill="#282c34" rx="10" />
+
+  <!-- Controller Shape -->
+  <rect x="40" y="30" width="120" height="40" rx="20" fill="#61dafb" />
+  <circle cx="70" cy="50" r="6" fill="#282c34" />
+  <circle cx="130" cy="50" r="6" fill="#282c34" />
+
+  <!-- "HB" Text -->
+  <text x="50%" y="50%" text-anchor="middle" fill="#6d239e" font-family="Arial, sans-serif" font-size="18" dy="5">
+    GH
+  </text>
+
+  <!-- Game Symbol -->
+  <rect x="90" y="15" width="20" height="10" fill="#ffffff" />
+  <rect x="95" y="20" width="10" height="10" fill="#ffffff" />
+</svg>

@@ -1,0 +1,63 @@
+.about-us {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #1f2937;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  color: white;
+  text-align: center;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  color: #a78bfa;
+}
+
+.intro {
+  font-size: 1.2rem;
+  color: #9ca3af;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.team-member {
+  margin-bottom: 3rem;
+}
+
+.profile-pic {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+.team-member h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: white;
+  transition: color 0.3s ease;
+}
+
+.team-member p {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.team-member a {
+  color: #a78bfa;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.team-member a:hover {
+  color: #c4b5fd;
+}

@@ -1,8 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./Home.css";
-import chess_img from "./chess.jpg";
-import sonic_img from "./sonic.png";
+import chess_img from "./images/chess.jpg";
+import sonic_img from "./images/sonic.png";
 const games = [
   {
     id: 1,
@@ -100,6 +100,18 @@ function Home({ user }) {
           ))}
         </div>
       </div>
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-links">
+            <Link to="/about" className="footer-link">
+              About Us
+            </Link>
+          </div>
+          <div className="copyright">
+            © {new Date().getFullYear()} Game Hub. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
